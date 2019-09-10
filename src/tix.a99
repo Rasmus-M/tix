@@ -130,8 +130,6 @@ upload_map:
        a    r5,r1
        mov  @scroll_y,r5
        andi r5,7
-       neg  r5
-       ai   r5,7
        sla  r5,4
        swpb r5
 upload_map_1:

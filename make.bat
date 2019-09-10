@@ -1,1 +1,1 @@
-xas99.py -R src/tix.a99
+xas99.py -R -L tix.lst src/tix.a99
