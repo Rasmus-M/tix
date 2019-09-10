@@ -69,8 +69,10 @@ name_table_flag:
        equ  scroll_y+2
 vdp_status:
        equ  name_table_flag+2
-pad_max:
+upload_map_pad:
        equ  vdp_status+2
+pad_max:
+       equ  upload_map_pad+16
 
 **
 * Macros
@@ -126,6 +128,7 @@ loop:
 * Wait for vertical retrace (CRU)
 *
 vsync:
+       movb @vdpsta,@vdp_status
        clr  r12
 vsync_1:
        tb   2                          ; Test CRU bit for VDP interrupt
@@ -176,6 +179,8 @@ upload_map:
        andi r5,7
        sla  r5,4
        swpb r5
+       bl   @upload_map_pad
+       .endproc
 upload_map_1:
        movb *r1+,r3
        sla  r3,2
@@ -184,7 +189,8 @@ upload_map_1:
        movb r3,*r4
        dec  r2
        jne  upload_map_1
-       .endproc
+       rt
+upload_map_2
 *// upload_map
 
 *********************************************************************
@@ -209,6 +215,14 @@ one_time_init:
        li   r1,colors
        li   r2,8*8*16
        bl   @vmbw
+*      Copy code to PAD
+       li   r0,upload_map_1
+       li   r1,upload_map_pad
+       li   r2,upload_map_2-upload_map_1
+one_time_init_1:
+       mov  *r0+,*r1+
+       dect r2
+       jne  one_time_init_1
        .endproc
 *// one_time_init
 
