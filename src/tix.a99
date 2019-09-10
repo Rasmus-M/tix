@@ -130,12 +130,14 @@ upload_map:
        a    r5,r1
        mov  @scroll_y,r5
        andi r5,7
+       neg  r5
+       ai   r5,7
        sla  r5,4
        swpb r5
 upload_map_1:
-       movb *r0+,r3
+       movb *r1+,r3
        sla  r3,2
-       socb *r1+,r3
+       socb *r0+,r3
        ab   r5,r3
        movb r3,*r4
        dec  r2
