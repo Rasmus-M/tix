@@ -29,16 +29,17 @@ grmwa  equ  >9C02                      ; GROM address write
 ptrntb equ  >0000                      ; Pattern table base
 sprptb equ  >1800                      ; Sprite pattern table base
 colrtb equ  >2000                      ; Color table base
-nametb equ  >2800                      ; Name table base
+namet1 equ  >2800                      ; Name table base A
+namet2 equ  >2c00                      ; Name table base B
 spratb equ  >3000                      ; Sprite attribute table base
 
 **
 * Constants
 *
 map_width:
-       equ  256
+       equ  32
 map_height:
-       equ  16
+       equ  64
 
 **
 * Scratch pad
@@ -64,8 +65,12 @@ padvar equ  stack+>18                  ; Start of pad variables
 *
 scroll_y:
        equ  padvar+2
-pad_max:
+name_table_flag:
        equ  scroll_y+2
+vdp_status:
+       equ  name_table_flag+2
+pad_max:
+       equ  vdp_status+2
 
 **
 * Macros
@@ -105,18 +110,55 @@ main:
        bl   @graphics_mode
        bl   @one_time_init
        clr  @scroll_y
+       clr  @name_table_flag
 loop:
+       bl   @vsync
+       bl   @update_vdp_regs
        bl   @upload_map
+       mov  @scroll_y,r0
+       ci   r0,>140
+       jhe  loop
        inc  @scroll_y
        jmp  loop
 
 *********************************************************************
 *
-* Upload screen to VDP
+* Wait for vertical retrace (CRU)
+*
+vsync:
+       clr  r12
+vsync_1:
+       tb   2                          ; Test CRU bit for VDP interrupt
+       jeq  vsync_1
+       movb @vdpsta,@vdp_status
+       rt
+*// vsync
+
+***************************************************************
+*
+* Update VDP registers
+*
+update_vdp_regs:
+       .proc
+*      Set name table
+       mov  @name_table_flag,r0
+       andi r0,>0001
+       ori  r0,>020a
+       bl   @vwtr
+       inv  @name_table_flag
+       .endproc
+*// update_vdp_regs
+
+*********************************************************************
+*
+* Upload one screen of map to VDP
 *
 upload_map:
        .proc
-       li   r0,nametb
+       mov  @name_table_flag,r0
+       andi r0,>0001
+       sla  r0,10
+       ai   r0,namet1
        bl   @vwad
        li   r0,map
        li   r1,map+32
@@ -124,11 +166,13 @@ upload_map:
        clr  r3
        li   r4,vdpwd
        mov  @scroll_y,r5
+       dec  r5
        srl  r5,3
        sla  r5,5
        a    r5,r0
        a    r5,r1
        mov  @scroll_y,r5
+       dec  r5
        andi r5,7
        sla  r5,4
        swpb r5
@@ -193,7 +237,7 @@ graphics_mode_1:
 vdp_registers:
        byte >02                        ; Graphics II mode
        byte >e2                        ; 16K, display on, interrupt enabled
-       byte nametb/>400                ; Name table
+       byte namet1/>400                ; Name table
        byte >9f                        ; Color table
        byte ptrntb/>800+>03            ; Pattern table
        byte spratb/>80                 ; Sprite attribute table
@@ -347,7 +391,6 @@ vmbr_1:
 * Data
 *
        copy "chars.a99"
-map:
        copy "map.a99"
 
        end main
