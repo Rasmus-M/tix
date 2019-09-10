@@ -62,8 +62,10 @@ padvar equ  stack+>18                  ; Start of pad variables
 **
 * PAD variables
 *
-pad_max:
+scroll_y:
        equ  padvar+2
+pad_max:
+       equ  scroll_y+2
 
 **
 * Macros
@@ -102,32 +104,44 @@ main:
        li   r10,stack                  ; Setup stack pointer
        bl   @graphics_mode
        bl   @one_time_init
-       li   r3,>0000
+       clr  @scroll_y
 loop:
+       bl   @upload_map
+       inc  @scroll_y
+       jmp  loop
+
+*********************************************************************
+*
+* Upload screen to VDP
+*
+upload_map:
+       .proc
        li   r0,nametb
        bl   @vwad
-       li   r4,768/4
-loop_1:
-       li   r1,data
-       movb *r1+,r0
-       a    r3,r0
-       mov  r0,@vdpwd
-       movb *r1+,r0
-       a    r3,r0
-       mov  r0,@vdpwd
-       movb *r1+,r0
-       a    r3,r0
-       mov  r0,@vdpwd
-       movb *r1+,r0
-       a    r3,r0
-       mov  r0,@vdpwd
-       dec  r4
-       jne  loop_1
-       ai   r3,>1000
-       andi r3,>7f00
-       jmp  loop
-data:  byte >00,>05,>0a,>0f
-
+       li   r0,map
+       li   r1,map+32
+       li   r2,768
+       clr  r3
+       li   r4,vdpwd
+       mov  @scroll_y,r5
+       srl  r5,3
+       sla  r5,5
+       a    r5,r0
+       a    r5,r1
+       mov  @scroll_y,r5
+       andi r5,7
+       sla  r5,4
+       swpb r5
+upload_map_1:
+       movb *r0+,r3
+       sla  r3,2
+       socb *r1+,r3
+       ab   r5,r3
+       movb r3,*r4
+       dec  r2
+       jne  upload_map_1
+       .endproc
+*// upload_map
 
 *********************************************************************
 *
@@ -136,22 +150,21 @@ data:  byte >00,>05,>0a,>0f
 one_time_init:
        .proc
        li   r0,ptrntb
-       li   r1,VPFRM0
+       li   r1,chars
        li   r2,8*8*16
        bl   @vmbw
        li   r0,ptrntb+>800
-       li   r1,VPFRM0
+       li   r1,chars
        li   r2,8*8*16
        bl   @vmbw
        li   r0,ptrntb+>1000
-       li   r1,VPFRM0
+       li   r1,chars
        li   r2,8*8*16
        bl   @vmbw
        li   r0,colrtb
-       li   r1,VCFRM0
+       li   r1,colors
        li   r2,8*8*16
        bl   @vmbw
-*      Return
        .endproc
 *// one_time_init
 
@@ -175,7 +188,6 @@ graphics_mode_1:
        clr  r1
        li   r2,>4000
        bl   @vsmw
-*      Return
        .endproc
 *      VDP registers
 vdp_registers:
@@ -211,8 +223,6 @@ vwtr:
 *
 * R0: Write address in VDP RAM
 *
-* R0 is modified, but can be restored with: ANDI R0,>3FFF
-*
 vwad:
        swpb r0
        movb r0,@vdpwa                  ; Send low byte of VDP RAM write address
@@ -228,8 +238,6 @@ vwad:
 *
 * R0: Write address in VDP RAM
 * R1: MSB of R1 sent to VDP RAM
-*
-* R0 is modified, but can be restored with: ANDI R0,>3FFF
 *
 vsbw:
        swpb r0
@@ -248,8 +256,6 @@ vsbw:
 * R0: Write address in VDP RAM
 * R1: Starting read address in CPU RAM
 * R2: Number of bytes to send
-*
-* R0 is modified, but can be restored with: ANDI R0,>3FFF
 *
 vmbw:
        movb  @r0lb,@vdpwa              ; Send low byte of VDP RAM write address
@@ -270,8 +276,6 @@ vmbw_1:
 * R0: Write address in VDP RAM
 * R1: MSB of R1 sent to VDP RAM
 * R2: Number of bytes to write to VDP RAM
-*
-* R0 is modified, but can be restored with: ANDI R0,>3FFF
 *
 vsmw:
        movb  @r0lb,@vdpwa              ; Send low byte of VDP RAM write address
@@ -343,5 +347,7 @@ vmbr_1:
 * Data
 *
        copy "chars.a99"
+map:
+       copy "map.a99"
 
        end main
