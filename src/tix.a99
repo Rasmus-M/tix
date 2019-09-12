@@ -190,6 +190,7 @@ user_input:
        mov  @x,r1
        ai   r1,4
        li   r2,>0200
+       li   r3,>0100
        bl   @flood_fill
        jmp  user_input_5
 user_input_1:
@@ -352,7 +353,8 @@ plot:
 *
 * r0: x (pixels)
 * r1: y (pixels)
-* r2: char (MSB)
+* r2 (MSB): replacement char
+* r3 (MSB): target char
 *
 flood_fill:
        .proc
@@ -365,9 +367,11 @@ flood_fill:
        mov  r0,*r1+
 flood_fill_1:
        dect r1
-       movb *r1,r0                     ; Pop address
-       movb *r0,r3                     ; Get existing char
-       jne  flood_fill_2               ; Stop if filled
+       mov  *r1,r0                     ; Pop address
+       cb   r2,*r0                     ; Compare to fill char
+       jeq  flood_fill_2               ; Stop if filled
+       cb   r3,*r0                     ; Compare to target char
+       jeq  flood_fill_2               ; Stop if filled
        movb r2,*r0+                    ; Fill and move right
        mov  r0,*r1+                    ; Push right
        dect r0                         ; Move left
