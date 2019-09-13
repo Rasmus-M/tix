@@ -75,8 +75,10 @@ dx:
        equ  y+2
 dy:
        equ  dx+2
-scroll_y:
+fire:
        equ  dy+2
+scroll_y:
+       equ  fire+2
 name_table_flag:
        equ  scroll_y+2
 vdp_status:
@@ -173,6 +175,7 @@ update_vdp_regs:
 *
 user_input:
        .proc
+       clr  @fire
        mov  @x,r0
        andi r0,7
        jne  !
@@ -185,14 +188,7 @@ user_input:
        bl   @check_key
 *      Fire
        jeq  user_input_1
-       mov  @y,r0
-       ai   r0,4
-       mov  @x,r1
-       ai   r1,4
-       li   r2,>0200
-       li   r3,>0100
-       bl   @flood_fill
-       jmp  user_input_5
+       seto @fire
 user_input_1:
 *      Left
        tb   1
@@ -230,6 +226,7 @@ user_input_5:
 *
 move_player:
        .proc
+*      Move x
        mov  @x,r0
        a    @dx,r0
        ci   r0,0
@@ -237,6 +234,7 @@ move_player:
        ci   r0,256-8
        jgt  move_player_1
        mov  r0,@x
+*      Move y
 move_player_1:
        mov  @y,r0
        a    @dy,r0
@@ -245,20 +243,31 @@ move_player_1:
        ci   r0,map_height_pixels-8
        jgt  move_player_2
        mov  r0,@y
+*      Scroll
 move_player_2:
        mov  @y,r0
        ci   r0,96
-       jlt  move_player_3
-       ci   r0,map_height_pixels-96
        jhe  move_player_3
-       a    @dy,@scroll_y
+       clr  r0
+       jmp  move_player_5
 move_player_3:
+       ci   r0,map_height_pixels-96
+       jlt  move_player_4
+       li   r0,map_height_pixels-192
+       jmp  move_player_5
+move_player_4:
+       mov  @y,r0
+       ai   r0,-96
+move_player_5:
+       mov  r0,@scroll_y
+*      Plot trail
        mov  @y,r0
        ai   r0,4
        mov  @x,r1
        ai   r1,4
+       bl   @map_address
        li   r2,>0100
-;      bl   @plot
+       movb r2,*r0
        .endproc
 *// move_player
 
@@ -331,6 +340,20 @@ upload_map_2
 
 *********************************************************************
 *
+* Get char
+*
+* r0: x (pixels)
+* r1: y (pixels)
+*
+get_char:
+       .proc
+       bl   @map_address
+       movb *r0,r1
+       .endproc
+*// get_char
+
+*********************************************************************
+*
 * Plot
 *
 * r0: x (pixels)
@@ -338,14 +361,27 @@ upload_map_2
 * r2: char (MSB)
 *
 plot:
+       .proc
+       bl   @map_address
+       movb r2,*r0
+       .endproc
+*// plot
+
+*********************************************************************
+*
+* Map address
+*
+* r0: x (pixels)
+* r1: y (pixels)
+*
+map_address:
        srl  r0,3
        sla  r0,5
        srl  r1,3
        a    r1,r0
        ai   r0,map
-       movb r2,*r0
        rt
-*// plot
+*// map_address
 
 *********************************************************************
 *
