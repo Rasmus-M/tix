@@ -77,8 +77,10 @@ dy:
        equ  dx+2
 fire:
        equ  dy+2
-scroll_y:
+char_aligned:
        equ  fire+2
+scroll_y:
+       equ  char_aligned+2
 name_table_flag:
        equ  scroll_y+2
 vdp_status:
@@ -176,15 +178,17 @@ update_vdp_regs:
 user_input:
        .proc
        clr  @fire
+       clr  @char_aligned
        mov  @x,r0
        andi r0,7
-       jne  !
-       clr  @dx
-!      mov  @y,r0
+       jne  user_input_5
+       mov  @y,r0
        andi r0,7
-       jne  !
+       jne  user_input_5
+       seto @char_aligned
+       clr  @dx
        clr  @dy
-!      li   r0,JOY_FI
+       li   r0,JOY_FI
        bl   @check_key
 *      Fire
        jeq  user_input_1
@@ -226,48 +230,81 @@ user_input_5:
 *
 move_player:
        .proc
+*      Check where we're going
+       abs  @char_aligned
+       jeq  move_player_5
+       mov  @x,r0
+       mov  @dx,r2
+       jeq  move_player_2
+       jlt  move_player_1
+       ai   r0,12
+       jmp  move_player_2
+move_player_1:
+       ai   r0,-4
+move_player_2:
+       mov  @y,r1
+       mov  @dy,r2
+       jeq  move_player_4
+       jlt  move_player_3
+       ai   r1,12
+       jmp  move_player_4
+move_player_3:
+       ai   r1,-4
+move_player_4:
+       bl   @get_char
+       movb r1,r1
+       jeq  move_player_5
+       cb   r1,@white
+       jeq  move_player_5
+       clr  @dx
+       clr  @dy
+       jmp  move_player_11
 *      Move x
+move_player_5:
        mov  @x,r0
        a    @dx,r0
        ci   r0,0
-       jlt  move_player_1
+       jlt  move_player_6
        ci   r0,256-8
-       jgt  move_player_1
+       jgt  move_player_6
        mov  r0,@x
 *      Move y
-move_player_1:
+move_player_6:
        mov  @y,r0
        a    @dy,r0
        ci   r0,0
-       jlt  move_player_2
+       jlt  move_player_7
        ci   r0,map_height_pixels-8
-       jgt  move_player_2
+       jgt  move_player_7
        mov  r0,@y
 *      Scroll
-move_player_2:
+move_player_7:
        mov  @y,r0
        ci   r0,96
-       jhe  move_player_3
+       jhe  move_player_8
        clr  r0
-       jmp  move_player_5
-move_player_3:
+       jmp  move_player_10
+move_player_8:
        ci   r0,map_height_pixels-96
-       jlt  move_player_4
+       jlt  move_player_9
        li   r0,map_height_pixels-192
-       jmp  move_player_5
-move_player_4:
+       jmp  move_player_10
+move_player_9:
        mov  @y,r0
        ai   r0,-96
-move_player_5:
+move_player_10:
        mov  r0,@scroll_y
 *      Plot trail
-       mov  @y,r0
+       mov  @x,r0
        ai   r0,4
-       mov  @x,r1
+       mov  @y,r1
        ai   r1,4
-       bl   @map_address
+       bl   @get_char
+       movb r1,r1
+       jne  move_player_11
        li   r2,>0100
        movb r2,*r0
+move_player_11:
        .endproc
 *// move_player
 
@@ -345,6 +382,8 @@ upload_map_2
 * r0: x (pixels)
 * r1: y (pixels)
 *
+* On return r1 MSB contains the char and r0 contains the address.
+*
 get_char:
        .proc
        bl   @map_address
@@ -360,6 +399,8 @@ get_char:
 * r1: y (pixels)
 * r2: char (MSB)
 *
+* On r0 contains the address. r1 is modified. r2 is preserved.
+*
 plot:
        .proc
        bl   @map_address
@@ -374,10 +415,12 @@ plot:
 * r0: x (pixels)
 * r1: y (pixels)
 *
+* On return r0 contains the address. r1 is modified.
+*
 map_address:
-       srl  r0,3
-       sla  r0,5
        srl  r1,3
+       sla  r1,5
+       srl  r0,3
        a    r1,r0
        ai   r0,map
        rt
@@ -723,6 +766,15 @@ check_key:
 *
 * Data
 *
+black:
+       byte >00
+white:
+       byte >01
+blue:
+       byte >02
+red:
+       byte >03
+
        copy "chars.a99"
        copy "sprites.a99"
        copy "map.a99"
