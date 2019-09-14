@@ -79,8 +79,12 @@ fire:
        equ  dy+2
 char_aligned:
        equ  fire+2
-scroll_y:
+trailing:
        equ  char_aligned+2
+last_trail_address:
+       equ  trailing+2
+scroll_y:
+       equ  last_trail_address+2
 name_table_flag:
        equ  scroll_y+2
 vdp_status:
@@ -129,15 +133,17 @@ main:
        bl   @one_time_init
        clr  @scroll_y
        clr  @name_table_flag
-       li   r0,128
+       clr  @trailing
+       li   r0,132
        mov  r0,@x
-       li   r0,0
+       li   r0,4
        mov  r0,@y
 loop:
        bl   @vsync
        bl   @update_vdp_regs
        bl   @user_input
        bl   @move_player
+       bl   @plot_trail
        bl   @upload_sprites
        bl   @upload_map
        jmp  loop
@@ -181,9 +187,11 @@ user_input:
        clr  @char_aligned
        mov  @x,r0
        andi r0,7
+       ci   r0,4
        jne  user_input_5
        mov  @y,r0
        andi r0,7
+       ci   r0,4
        jne  user_input_5
        seto @char_aligned
        clr  @dx
@@ -233,24 +241,12 @@ move_player:
 *      Check where we're going
        abs  @char_aligned
        jeq  move_player_5
-       mov  @x,r0
-       mov  @dx,r2
-       jeq  move_player_2
-       jlt  move_player_1
-       ai   r0,12
-       jmp  move_player_2
-move_player_1:
-       ai   r0,-4
-move_player_2:
-       mov  @y,r1
-       mov  @dy,r2
-       jeq  move_player_4
-       jlt  move_player_3
-       ai   r1,12
-       jmp  move_player_4
-move_player_3:
-       ai   r1,-4
-move_player_4:
+       mov  @dx,r0
+       sla  r0,3
+       a    @x,r0
+       mov  @dy,r1
+       sla  r1,3
+       a    @y,r1
        bl   @get_char
        movb r1,r1
        jeq  move_player_5
@@ -263,18 +259,18 @@ move_player_4:
 move_player_5:
        mov  @x,r0
        a    @dx,r0
-       ci   r0,0
+       ci   r0,4
        jlt  move_player_6
-       ci   r0,256-8
+       ci   r0,256-4
        jgt  move_player_6
        mov  r0,@x
 *      Move y
 move_player_6:
        mov  @y,r0
        a    @dy,r0
-       ci   r0,0
+       ci   r0,4
        jlt  move_player_7
-       ci   r0,map_height_pixels-8
+       ci   r0,map_height_pixels-4
        jgt  move_player_7
        mov  r0,@y
 *      Scroll
@@ -294,19 +290,38 @@ move_player_9:
        ai   r0,-96
 move_player_10:
        mov  r0,@scroll_y
-*      Plot trail
-       mov  @x,r0
-       ai   r0,4
-       mov  @y,r1
-       ai   r1,4
-       bl   @get_char
-       movb r1,r1
-       jne  move_player_11
-       li   r2,>0100
-       movb r2,*r0
 move_player_11:
        .endproc
 *// move_player
+
+*********************************************************************
+*
+* Plot trail
+*
+plot_trail:
+       .proc
+       mov  @x,r0
+       mov  @y,r1
+       bl   @get_char
+       movb r1,r1
+       jne  plot_trail_1
+*      Empty position
+       seto @trailing
+       mov  r0,@last_trail_address
+       li   r2,>0100
+       movb r2,*r0
+plot_trail_1:
+*      Filled position (assumed white)
+       abs  @trailing
+       jeq  plot_trail_2
+       c    r0,@last_trail_address
+       jeq  plot_trail_2
+*      End of trail
+
+
+plot_trail_2:
+       .endproc
+*// plot_trail
 
 *********************************************************************
 *
@@ -319,10 +334,11 @@ upload_sprites:
        li   r0,vdpwd
        mov  @y,r1
        s    @scroll_y,r1
-       dec  r1
+       ai   r1,-5
        swpb r1
        movb r1,*r0
        mov  @x,r1
+       ai   r1,-4
        swpb r1
        mov  r1,*r0
        li   r1,>100d
@@ -437,11 +453,7 @@ map_address:
 *
 flood_fill:
        .proc
-       srl  r0,3
-       sla  r0,5
-       srl  r1,3
-       a    r1,r0
-       ai   r0,map
+       bl   @map_address
        li   r1,flood_fill_stack
        mov  r0,*r1+
 flood_fill_1:
