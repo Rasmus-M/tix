@@ -317,8 +317,20 @@ plot_trail_1:
        c    r0,@last_trail_address
        jeq  plot_trail_2
 *      End of trail
-
-
+       mov  @x,r0
+       mov  @y,r1
+       mov  @dx,r2
+       sla  r2,3
+       mov  @dy,r3
+       sla  r3,3
+       s    r2,r0                      ; Backtrack one tile
+       s    r3,r1
+       s    r3,r0                      ; One tile to the right
+       a    r2,r1
+       li   r2,>0200
+       li   r3,>0100
+       bl   @flood_fill
+       clr  @trailing
 plot_trail_2:
        .endproc
 *// plot_trail
@@ -451,11 +463,14 @@ map_address:
 * r2 (MSB): replacement char
 * r3 (MSB): target char
 *
+* On return r4 contains the number of pixels filled.
+*
 flood_fill:
        .proc
        bl   @map_address
        li   r1,flood_fill_stack
        mov  r0,*r1+
+       clr  r4                         ; Counter
 flood_fill_1:
        dect r1
        mov  *r1,r0                     ; Pop address
@@ -471,6 +486,7 @@ flood_fill_1:
        mov  r0,*r1+                    ; Push down
        ai   r0,-map_width*2            ; Move up
        mov  r0,*r1+                    ; Push up
+       inc  r4
        jmp  flood_fill_1
 flood_fill_2:
        ci   r1,flood_fill_stack        ; Is stack empty?
@@ -789,7 +805,7 @@ red:
 
        copy "chars.a99"
        copy "sprites.a99"
-       copy "map.a99"
+       copy "map-empty.a99"
 
 flood_fill_stack:
        bss  2*768
