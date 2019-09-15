@@ -44,6 +44,16 @@ map_height:
        equ  64
 map_height_pixels:
        equ  512
+black:
+       equ  0
+white:
+       equ  1
+blue:
+       equ  2
+red:
+       equ  3
+tix:
+       equ  >ff
 
 **
 * Scratch pad
@@ -62,7 +72,7 @@ r7lb   equ  wrksp+15
 r8lb   equ  wrksp+17
 r9lb   equ  wrksp+19
 stack  equ  wrksp+>20                  ; Stack (grows up)
-padvar equ  stack+>18                  ; Start of pad variables
+padvar equ  stack+>20                  ; Start of pad variables
 
 **
 * PAD variables
@@ -89,8 +99,16 @@ name_table_flag:
        equ  scroll_y+2
 vdp_status:
        equ  name_table_flag+2
-upload_map_pad:
+tix_x:
        equ  vdp_status+2
+tix_y:
+       equ  tix_x+2
+tix_dx:
+       equ  tix_y+2
+tix_dy:
+       equ  tix_dx+2
+upload_map_pad:
+       equ  tix_dy+2
 pad_max:
        equ  upload_map_pad+16
 
@@ -138,6 +156,10 @@ main:
        mov  r0,@x
        li   r0,4
        mov  r0,@y
+       li   r0,128
+       mov  r0,@tix_x
+       li   r1,128
+       mov  r0,@tix_y
 loop:
        bl   @vsync
        bl   @update_vdp_regs
@@ -250,7 +272,7 @@ move_player:
        bl   @get_char
        movb r1,r1
        jeq  move_player_5
-       cb   r1,@white
+       cb   r1,@b_white
        jeq  move_player_5
        clr  @dx
        clr  @dy
@@ -313,10 +335,11 @@ plot_trail:
 plot_trail_1:
 *      Filled position (assumed white)
        abs  @trailing
-       jeq  plot_trail_2
+       jeq  plot_trail_3
        c    r0,@last_trail_address
-       jeq  plot_trail_2
+       jeq  plot_trail_3
 *      End of trail
+       bl   @save_map
        mov  @x,r0
        mov  @y,r1
        mov  @dx,r2
@@ -325,13 +348,31 @@ plot_trail_1:
        sla  r3,3
        s    r2,r0                      ; Backtrack one tile
        s    r3,r1
+       .push r0
+       .push r1
+       .push r2
+       .push r3
        s    r3,r0                      ; One tile to the right
        a    r2,r1
-       li   r2,>0200
-       li   r3,>0100
+       li   r2,blue*256
+       li   r3,white*256
        bl   @flood_fill
-       clr  @trailing
+       .pop r3
+       .pop r2
+       .pop r1
+       .pop r0
+       mov  r4,r4
+       jgt  plot_trail_2
+       jeq  plot_trail_2
+       bl   @restore_map
+       a    r3,r0                      ; One tile to the left
+       s    r2,r1
+       li   r2,red*256
+       li   r3,white*256
+       bl   @flood_fill
 plot_trail_2:
+       clr  @trailing
+plot_trail_3:
        .endproc
 *// plot_trail
 
@@ -405,6 +446,44 @@ upload_map_2
 
 *********************************************************************
 *
+* Save map
+*
+save_map:
+       .proc
+       .push r0
+       .push r1
+       .push r2
+       li   r0,map
+       li   r1,map_backup
+       li   r2,map_width*map_height
+       bl   @copy
+       .pop r2
+       .pop r1
+       .pop r0
+       .endproc
+*// save_map
+
+*********************************************************************
+*
+* Restore map
+*
+restore_map:
+       .proc
+       .push r0
+       .push r1
+       .push r2
+       li   r0,map_backup
+       li   r1,map
+       li   r2,map_width*map_height
+       bl   @copy
+       .pop r2
+       .pop r1
+       .pop r0
+       .endproc
+*// restore_map
+
+*********************************************************************
+*
 * Get char
 *
 * r0: x (pixels)
@@ -438,6 +517,99 @@ plot:
 
 *********************************************************************
 *
+* Flood fill
+*
+* r0: x (pixels)
+* r1: y (pixels)
+* r2 (MSB): replacement char
+* r3 (MSB): target char
+*
+* On return r4 contains the number of pixels filled.
+*
+flood_fill:
+       .proc
+       bl   @mark_tix
+       bl   @map_address
+       bl   @flood_fill_addr
+       bl   @unmark_tix
+       .endproc
+*// flood_fill
+
+*********************************************************************
+*
+* Flood fill address
+*
+* r0: map address to fill from
+* r2 (MSB): replacement char
+* r3 (MSB): target char
+*
+* On return r4 contains the number of pixels filled.
+*
+flood_fill_addr:
+       li   r1,flood_fill_stack
+       mov  r0,*r1+
+       clr  r4                         ; Counter
+flood_fill_addr_1:
+       dect r1
+       mov  *r1,r0                     ; Pop address
+       movb *r0,r5                     ; Get existing char
+       jlt  flood_fill_addr_3          ; Tix found
+       cb   r2,r5                      ; Compare to fill char
+       jeq  flood_fill_addr_2          ; Stop if filled
+       cb   r3,r5                      ; Compare to target char
+       jeq  flood_fill_addr_2          ; Stop if filled
+       movb r2,*r0+                    ; Fill and move right
+       mov  r0,*r1+                    ; Push right
+       dect r0                         ; Move left
+       mov  r0,*r1+                    ; Push left
+       ai   r0,map_width+1             ; Move down
+       mov  r0,*r1+                    ; Push down
+       ai   r0,-map_width*2            ; Move up
+       mov  r0,*r1+                    ; Push up
+       inc  r4
+       jmp  flood_fill_addr_1
+flood_fill_addr_2:
+       ci   r1,flood_fill_stack        ; Is stack empty?
+       jne  flood_fill_addr_1          ; No - loop
+       jmp  flood_fill_addr_4
+flood_fill_addr_3:
+       seto r4                         ; Tix found
+flood_fill_addr_4:
+       rt
+*// flood_fill_addr
+
+*********************************************************************
+*
+* Mark tix on map
+*
+mark_tix:
+       .proc
+       .push r0
+       .push r1
+       mov  @tix_x,r0
+       mov  @tix_y,r1
+       bl   @map_address
+       movb @b_tix,*r0
+       .pop r1
+       .pop r0
+       .endproc
+*// mark_tix
+
+*********************************************************************
+*
+* Unmark tix on map
+*
+unmark_tix:
+       .proc
+       mov  @tix_x,r0
+       mov  @tix_y,r1
+       bl   @map_address
+       movb @b_black,*r0
+       .endproc
+*// unmark_tix
+
+*********************************************************************
+*
 * Map address
 *
 * r0: x (pixels)
@@ -453,46 +625,6 @@ map_address:
        ai   r0,map
        rt
 *// map_address
-
-*********************************************************************
-*
-* Flood fill
-*
-* r0: x (pixels)
-* r1: y (pixels)
-* r2 (MSB): replacement char
-* r3 (MSB): target char
-*
-* On return r4 contains the number of pixels filled.
-*
-flood_fill:
-       .proc
-       bl   @map_address
-       li   r1,flood_fill_stack
-       mov  r0,*r1+
-       clr  r4                         ; Counter
-flood_fill_1:
-       dect r1
-       mov  *r1,r0                     ; Pop address
-       cb   r2,*r0                     ; Compare to fill char
-       jeq  flood_fill_2               ; Stop if filled
-       cb   r3,*r0                     ; Compare to target char
-       jeq  flood_fill_2               ; Stop if filled
-       movb r2,*r0+                    ; Fill and move right
-       mov  r0,*r1+                    ; Push right
-       dect r0                         ; Move left
-       mov  r0,*r1+                    ; Push left
-       ai   r0,map_width+1             ; Move down
-       mov  r0,*r1+                    ; Push down
-       ai   r0,-map_width*2            ; Move up
-       mov  r0,*r1+                    ; Push up
-       inc  r4
-       jmp  flood_fill_1
-flood_fill_2:
-       ci   r1,flood_fill_stack        ; Is stack empty?
-       jne  flood_fill_1               ; No - loop
-       .endproc
-*// flood_fill
 
 *********************************************************************
 *
@@ -792,20 +924,40 @@ check_key:
 
 *********************************************************************
 *
+* CPU space to CPU space copy
+*
+* r0: source
+* r1: destination
+* r2: number of bytes
+*
+copy:
+       mov  *r0+,*r1+
+       dect r2
+       jne  copy
+       rt
+*// copy
+
+*********************************************************************
+*
 * Data
 *
-black:
-       byte >00
-white:
-       byte >01
-blue:
-       byte >02
-red:
-       byte >03
+b_black:
+       byte black
+b_white:
+       byte white
+b_blue:
+       byte blue
+b_red:
+       byte red
+b_tix:
+       byte tix
 
        copy "chars.a99"
        copy "sprites.a99"
        copy "map-empty.a99"
+
+map_backup:
+       bss  map_width*map_height
 
 flood_fill_stack:
        bss  2*768
