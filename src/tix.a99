@@ -85,14 +85,16 @@ dx:
        equ  y+2
 dy:
        equ  dx+2
-fire:
+old_dx:
        equ  dy+2
+old_dy:
+       equ  old_dx+2
+fire:
+       equ  old_dy+2
 char_aligned:
        equ  fire+2
-trailing:
-       equ  char_aligned+2
 last_trail_address:
-       equ  trailing+2
+       equ  char_aligned+2
 scroll_y:
        equ  last_trail_address+2
 name_table_flag:
@@ -151,7 +153,7 @@ main:
        bl   @one_time_init
        clr  @scroll_y
        clr  @name_table_flag
-       clr  @trailing
+       clr  @last_trail_address
        li   r0,132
        mov  r0,@x
        li   r0,4
@@ -211,11 +213,13 @@ user_input:
        andi r0,7
        ci   r0,4
        jne  user_input_5
-       mov  @y,r0
-       andi r0,7
-       ci   r0,4
+       mov  @y,r1
+       andi r1,7
+       ci   r1,4
        jne  user_input_5
        seto @char_aligned
+       mov  @dx,@old_dx
+       mov  @dy,@old_dy
        clr  @dx
        clr  @dy
        li   r0,JOY_FI
@@ -262,7 +266,7 @@ move_player:
        .proc
 *      Check where we're going
        abs  @char_aligned
-       jeq  move_player_5
+       jeq  move_player_2
        mov  @dx,r0
        sla  r0,3
        a    @x,r0
@@ -271,48 +275,52 @@ move_player:
        a    @y,r1
        bl   @get_char
        movb r1,r1
-       jeq  move_player_5
+       jeq  move_player_2
        cb   r1,@b_white
-       jeq  move_player_5
+       jne  move_player_1
+;       c    r0,@last_trail_address
+;       jne  move_player_2
+       jmp  move_player_2
+move_player_1:
        clr  @dx
        clr  @dy
-       jmp  move_player_11
+       jmp  move_player_8
 *      Move x
-move_player_5:
+move_player_2:
        mov  @x,r0
        a    @dx,r0
        ci   r0,4
-       jlt  move_player_6
+       jlt  move_player_3
        ci   r0,256-4
-       jgt  move_player_6
+       jgt  move_player_3
        mov  r0,@x
 *      Move y
-move_player_6:
+move_player_3:
        mov  @y,r0
        a    @dy,r0
        ci   r0,4
-       jlt  move_player_7
+       jlt  move_player_4
        ci   r0,map_height_pixels-4
-       jgt  move_player_7
+       jgt  move_player_4
        mov  r0,@y
 *      Scroll
-move_player_7:
+move_player_4:
        mov  @y,r0
        ci   r0,96
-       jhe  move_player_8
+       jhe  move_player_5
        clr  r0
-       jmp  move_player_10
-move_player_8:
+       jmp  move_player_7
+move_player_5:
        ci   r0,map_height_pixels-96
-       jlt  move_player_9
+       jlt  move_player_6
        li   r0,map_height_pixels-192
-       jmp  move_player_10
-move_player_9:
+       jmp  move_player_7
+move_player_6:
        mov  @y,r0
        ai   r0,-96
-move_player_10:
+move_player_7:
        mov  r0,@scroll_y
-move_player_11:
+move_player_8:
        .endproc
 *// move_player
 
@@ -322,57 +330,28 @@ move_player_11:
 *
 plot_trail:
        .proc
+       abs  @char_aligned
+       jeq  plot_trail_2
        mov  @x,r0
        mov  @y,r1
        bl   @get_char
        movb r1,r1
        jne  plot_trail_1
 *      Empty position
-       seto @trailing
        mov  r0,@last_trail_address
        li   r2,>0100
-       movb r2,*r0
+       movb r2,*r0                     ; Plot
+       jmp  plot_trail_2
+*      Not empty position
 plot_trail_1:
-*      Filled position (assumed white)
-       abs  @trailing
-       jeq  plot_trail_3
-       c    r0,@last_trail_address
-       jeq  plot_trail_3
-*      End of trail
-       bl   @save_map
-       mov  @x,r0
-       mov  @y,r1
-       mov  @dx,r2
-       sla  r2,3
-       mov  @dy,r3
-       sla  r3,3
-       s    r2,r0                      ; Backtrack one tile
-       s    r3,r1
-       .push r0
-       .push r1
-       .push r2
-       .push r3
-       s    r3,r0                      ; One tile to the right
-       a    r2,r1
-       li   r2,blue*256
-       li   r3,white*256
-       bl   @flood_fill
-       .pop r3
-       .pop r2
-       .pop r1
-       .pop r0
-       mov  r4,r4
-       jgt  plot_trail_2
+       mov  @last_trail_address,r1
        jeq  plot_trail_2
-       bl   @restore_map
-       a    r3,r0                      ; One tile to the left
-       s    r2,r1
-       li   r2,red*256
-       li   r3,white*256
-       bl   @flood_fill
+       c    r0,r1
+       jeq  plot_trail_2
+*      End of trail:
+       bl   @fill_closure
+       clr  @last_trail_address
 plot_trail_2:
-       clr  @trailing
-plot_trail_3:
        .endproc
 *// plot_trail
 
@@ -446,20 +425,57 @@ upload_map_2
 
 *********************************************************************
 *
+* Fill closure
+*
+fill_closure:
+       .proc
+       bl   @save_map
+*      Fill to the right
+       mov  @x,r0
+       mov  @y,r1
+       mov  @old_dx,r2
+       sla  r2,3
+       mov  @old_dy,r3
+       sla  r3,3
+       s    r2,r0                      ; Backtrack one tile
+       s    r3,r1
+       s    r3,r0                      ; One tile to the right
+       a    r2,r1
+       li   r2,blue*256
+       li   r3,white*256
+       bl   @flood_fill
+       mov  r4,r4
+       jgt  fill_closure_1
+       jeq  fill_closure_1
+*      Fill to the left
+       bl   @restore_map
+       mov  @x,r0
+       mov  @y,r1
+       mov  @old_dx,r2
+       sla  r2,3
+       mov  @old_dy,r3
+       sla  r3,3
+       s    r2,r0                      ; Backtrack one tile
+       s    r3,r1
+       a    r3,r0                      ; One tile to the left
+       s    r2,r1
+       li   r2,red*256
+       li   r3,white*256
+       bl   @flood_fill
+fill_closure_1:
+       .endproc
+*// fill_closure
+
+*********************************************************************
+*
 * Save map
 *
 save_map:
        .proc
-       .push r0
-       .push r1
-       .push r2
        li   r0,map
        li   r1,map_backup
        li   r2,map_width*map_height
        bl   @copy
-       .pop r2
-       .pop r1
-       .pop r0
        .endproc
 *// save_map
 
@@ -469,16 +485,10 @@ save_map:
 *
 restore_map:
        .proc
-       .push r0
-       .push r1
-       .push r2
        li   r0,map_backup
        li   r1,map
        li   r2,map_width*map_height
        bl   @copy
-       .pop r2
-       .pop r1
-       .pop r0
        .endproc
 *// restore_map
 
@@ -954,8 +964,14 @@ b_tix:
 
        copy "chars.a99"
        copy "sprites.a99"
-       copy "map-empty.a99"
 
+* One extra map row to support scrolling
+       DATA >0101,>0101,>0101,>0101    ;
+       DATA >0101,>0101,>0101,>0101    ;
+       DATA >0101,>0101,>0101,>0101    ;
+       DATA >0101,>0101,>0101,>0101    ;
+map:
+       copy "map-empty.a99"
 map_backup:
        bss  map_width*map_height
 
