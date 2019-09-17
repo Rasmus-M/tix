@@ -93,10 +93,10 @@ fire:
        equ  old_dy+2
 char_aligned:
        equ  fire+2
-last_trail_address:
+trail_pointer:
        equ  char_aligned+2
 scroll_y:
-       equ  last_trail_address+2
+       equ  trail_pointer+2
 name_table_flag:
        equ  scroll_y+2
 vdp_status:
@@ -153,7 +153,7 @@ main:
        bl   @one_time_init
        clr  @scroll_y
        clr  @name_table_flag
-       clr  @last_trail_address
+       clr  @trail_pointer
        li   r0,132
        mov  r0,@x
        li   r0,4
@@ -278,8 +278,14 @@ move_player:
        jeq  move_player_2
        cb   r1,@b_white
        jne  move_player_1
-;       c    r0,@last_trail_address
-;       jne  move_player_2
+       mov  @trail_pointer,r1
+       jeq  move_player_2
+move_player_0:
+       dect r1
+       c    r0,*r1
+       jeq  move_player_1
+       ci   r1,trail
+       jne  move_player_0
        jmp  move_player_2
 move_player_1:
        clr  @dx
@@ -338,19 +344,25 @@ plot_trail:
        movb r1,r1
        jne  plot_trail_1
 *      Empty position
-       mov  r0,@last_trail_address
+       mov  @trail_pointer,r1
+       jne  plot_trail_0
+       li   r1,trail                   ; New trail
+plot_trail_0:
+       mov  r0,*r1+
+       mov  r1,@trail_pointer
        li   r2,>0100
        movb r2,*r0                     ; Plot
        jmp  plot_trail_2
 *      Not empty position
 plot_trail_1:
-       mov  @last_trail_address,r1
-       jeq  plot_trail_2
-       c    r0,r1
+       mov  @trail_pointer,r1
+       jeq  plot_trail_2               ; No trail
+       dect r1
+       c    r0,*r1
        jeq  plot_trail_2
 *      End of trail:
        bl   @fill_closure
-       clr  @last_trail_address
+       clr  @trail_pointer
 plot_trail_2:
        .endproc
 *// plot_trail
@@ -977,5 +989,7 @@ map_backup:
 
 flood_fill_stack:
        bss  2*768
+trail:
+       bss  512
 
        end main
