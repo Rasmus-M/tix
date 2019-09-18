@@ -54,6 +54,8 @@ red:
        equ  3
 tix:
        equ  >ff
+tix_tail_size:
+       equ  128
 
 **
 * Scratch pad
@@ -101,28 +103,18 @@ name_table_flag:
        equ  scroll_y+2
 vdp_status:
        equ  name_table_flag+2
-tix_x3:
-       equ  vdp_status+2
-tix_y3:
-       equ  tix_x3+2
-tix_x2:
-       equ  tix_y3+2
-tix_y2:
-       equ  tix_x2+2
-tix_x1:
-       equ  tix_y2+2
-tix_y1:
-       equ  tix_x1+2
 tix_x:
-       equ  tix_y1+2
+       equ  vdp_status+2
 tix_y:
        equ  tix_x+2
 tix_dx:
        equ  tix_y+2
 tix_dy:
        equ  tix_dx+2
-upload_map_pad:
+tix_tail_pointer:
        equ  tix_dy+2
+upload_map_pad:
+       equ  tix_tail_pointer+2
 pad_max:
        equ  upload_map_pad+16
 
@@ -184,25 +176,29 @@ init_game:
        clr  @scroll_y
        clr  @name_table_flag
        clr  @trail_pointer
+       li   r0,tix_tail
+       mov  r0,@tix_tail_pointer
 *      Player
        li   r0,132
        mov  r0,@x
        li   r0,4
        mov  r0,@y
 *      Tix
-       li   r0,2
+       li   r0,1
        mov  r0,@tix_dx
-       li   r1,2
+       li   r1,-1
        mov  r1,@tix_dy
        li   r2,4
-       li   r3,tix_x3
+       li   r3,tix_tail
        li   r4,132
+       mov  r4,@tix_x
        li   r5,132
+       mov  r5,@tix_y
 init_game_1:
-       mov  r4,*r3+
        mov  r5,*r3+
-       a    r0,r4
-       a    r1,r5
+       mov  r4,*r3+
+;       a    r0,r4
+;       a    r1,r5
        dec  r2
        jne init_game_1
        .endproc
@@ -409,13 +405,15 @@ plot_trail_2:
 *
 move_tix:
        .proc
-       li   r0,tix_x3
-       li   r1,tix_x2
-       li   r2,6
+       mov  @tix_tail_pointer,r0
+       ai   r0,-4
+       ci   r0,tix_tail
+       jhe  move_tix_0
+       li   r0,tix_tail+tix_tail_size-4
 move_tix_0:
-       mov  *r1+,*r0+
-       dec  r2
-       jne  move_tix_0
+       mov  r0,@tix_tail_pointer
+       mov  @tix_y,*r0+
+       mov  @tix_x,*r0+
 *      Check position
        mov  @tix_dx,r0
 ;       sla  r0,3
@@ -468,10 +466,10 @@ upload_sprites:
        mov  r1,*r0
 *      Tix
        li   r2,4
-       li   r3,tix_y
+       mov  @tix_tail_pointer,r3
        li   r4,tix_attr
 upload_sprites_1:
-       mov  *r3,r1
+       mov  *r3+,r1
        s    @scroll_y,r1
        ai   r1,-9
        ci   r1,-16
@@ -480,19 +478,22 @@ upload_sprites_1:
        jgt  upload_sprites_2
        swpb r1
        movb r1,*r0
-       dect r3
-       mov  *r3,r1
+       mov  *r3+,r1
        ai   r1,-8
        swpb r1
        movb r1,*r0
-       dect r3
        movb *r4+,*r0
        movb *r4+,*r0
        jmp  upload_sprites_3
 upload_sprites_2:
-       ai   r3,-4
+       inct r3
        inct r4
 upload_sprites_3:
+       ai   r3,8
+       ci   r3,tix_tail+tix_tail_size
+       jl   upload_sprites_4
+       ai   r3,-tix_tail_size
+upload_sprites_4:
        dec  r2
        jne  upload_sprites_1
 *      End marker
@@ -1070,6 +1071,20 @@ copy:
 
 *********************************************************************
 *
+* CPU space clear
+*
+* r0: start
+* r2: number of bytes
+*
+clear:
+       clr  *r0+
+       dect r2
+       jne  clear
+       rt
+*// clear
+
+*********************************************************************
+*
 * Data
 *
 b_black:
@@ -1100,5 +1115,7 @@ flood_fill_stack:
        bss  2*768
 trail:
        bss  512
+tix_tail:
+       bss  tix_tail_size
 
        end main
