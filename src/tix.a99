@@ -101,8 +101,20 @@ name_table_flag:
        equ  scroll_y+2
 vdp_status:
        equ  name_table_flag+2
-tix_x:
+tix_x3:
        equ  vdp_status+2
+tix_y3:
+       equ  tix_x3+2
+tix_x2:
+       equ  tix_y3+2
+tix_y2:
+       equ  tix_x2+2
+tix_x1:
+       equ  tix_y2+2
+tix_y1:
+       equ  tix_x1+2
+tix_x:
+       equ  tix_y1+2
 tix_y:
        equ  tix_x+2
 tix_dx:
@@ -151,26 +163,50 @@ main:
        li   r10,stack                  ; Setup stack pointer
        bl   @graphics_mode
        bl   @one_time_init
-       clr  @scroll_y
-       clr  @name_table_flag
-       clr  @trail_pointer
-       li   r0,132
-       mov  r0,@x
-       li   r0,4
-       mov  r0,@y
-       li   r0,128
-       mov  r0,@tix_x
-       li   r1,128
-       mov  r0,@tix_y
+       bl   @init_game
 loop:
        bl   @vsync
        bl   @update_vdp_regs
        bl   @user_input
        bl   @move_player
        bl   @plot_trail
+       bl   @move_tix
        bl   @upload_sprites
        bl   @upload_map
        jmp  loop
+
+*********************************************************************
+*
+* Init game
+*
+init_game:
+       .proc
+       clr  @scroll_y
+       clr  @name_table_flag
+       clr  @trail_pointer
+*      Player
+       li   r0,132
+       mov  r0,@x
+       li   r0,4
+       mov  r0,@y
+*      Tix
+       li   r0,2
+       mov  r0,@tix_dx
+       li   r1,2
+       mov  r1,@tix_dy
+       li   r2,4
+       li   r3,tix_x3
+       li   r4,132
+       li   r5,132
+init_game_1:
+       mov  r4,*r3+
+       mov  r5,*r3+
+       a    r0,r4
+       a    r1,r5
+       dec  r2
+       jne init_game_1
+       .endproc
+*// init_game
 
 *********************************************************************
 *
@@ -369,6 +405,46 @@ plot_trail_2:
 
 *********************************************************************
 *
+* Move Tix
+*
+move_tix:
+       .proc
+       li   r0,tix_x3
+       li   r1,tix_x2
+       li   r2,6
+move_tix_0:
+       mov  *r1+,*r0+
+       dec  r2
+       jne  move_tix_0
+*      Check position
+       mov  @tix_dx,r0
+;       sla  r0,3
+       a    @tix_x,r0
+       mov  @tix_y,r1
+       bl   @get_char
+       movb r1,r1
+       jeq  move_tix_1
+       neg  @tix_dx
+       jmp  move_tix_3
+move_tix_1:
+       mov  @tix_x,r0
+       mov  @tix_dy,r1
+;       sla  r1,3
+       a    @tix_y,r1
+       bl   @get_char
+       movb r1,r1
+       jeq  move_tix_2
+       neg  @tix_dy
+       jmp  move_tix_3
+move_tix_2:
+       a    @tix_dx,@tix_x
+       a    @tix_dy,@tix_y
+move_tix_3:
+       .endproc
+*// move_tix
+
+*********************************************************************
+*
 * Upload sprites
 *
 upload_sprites:
@@ -376,6 +452,7 @@ upload_sprites:
        li   r0,spratb
        bl   @vwad
        li   r0,vdpwd
+*      Player
        mov  @y,r1
        s    @scroll_y,r1
        ai   r1,-5
@@ -389,9 +466,41 @@ upload_sprites:
        movb r1,*r0
        swpb r1
        mov  r1,*r0
-       li   r1,>0d00
-       mov  r1,*r0
+*      Tix
+       li   r2,4
+       li   r3,tix_y
+       li   r4,tix_attr
+upload_sprites_1:
+       mov  *r3,r1
+       s    @scroll_y,r1
+       ai   r1,-9
+       ci   r1,-16
+       jlt  upload_sprites_2
+       ci   r1,191
+       jgt  upload_sprites_2
+       swpb r1
+       movb r1,*r0
+       dect r3
+       mov  *r3,r1
+       ai   r1,-8
+       swpb r1
+       movb r1,*r0
+       dect r3
+       movb *r4+,*r0
+       movb *r4+,*r0
+       jmp  upload_sprites_3
+upload_sprites_2:
+       ai   r3,-4
+       inct r4
+upload_sprites_3:
+       dec  r2
+       jne  upload_sprites_1
+*      End marker
+       li   r1,>d000
+       movb r1,*r0
        .endproc
+tix_attr:
+       data >000c,>0402,>0803,>0C0e
 *// upload_sprites
 
 *********************************************************************
@@ -640,10 +749,10 @@ unmark_tix:
 * On return r0 contains the address. r1 is modified.
 *
 map_address:
-       srl  r1,3
-       sla  r1,5
-       srl  r0,3
-       a    r1,r0
+       sra  r1,3                       ; y / 8
+       sla  r1,5                       ; * 32
+       srl  r0,3                       ; x / 8
+       a    r1,r0                      ; (x / 8) + (y / 8) * 32
        ai   r0,map
        rt
 *// map_address
