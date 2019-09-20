@@ -103,16 +103,20 @@ name_table_flag:
        equ  scroll_y+2
 vdp_status:
        equ  name_table_flag+2
-tix_x:
+tix_x:                                 ; FP 12.4
        equ  vdp_status+2
-tix_y:
+tix_y:                                 ; FP 12.4
        equ  tix_x+2
-tix_dx:
+tix_dx:                                ; FP 8.8
        equ  tix_y+2
-tix_dy:
+tix_dy:                                ; FP 8.8
        equ  tix_dx+2
-tix_tail_pointer:
+tix_ax:                                ; FP 8.8
        equ  tix_dy+2
+tix_ay:                                ; FP 8.8
+       equ  tix_ax+2
+tix_tail_pointer:
+       equ  tix_ay+2
 upload_map_pad:
        equ  tix_tail_pointer+2
 pad_max:
@@ -184,21 +188,21 @@ init_game:
        li   r0,4
        mov  r0,@y
 *      Tix
-       li   r0,1
+       clr  @tix_ax
+       clr  @tix_ay
+       li   r0,1*256
        mov  r0,@tix_dx
-       li   r1,-1
+       li   r1,-1*256
        mov  r1,@tix_dy
-       li   r2,4
+       li   r2,tix_tail_size/4
        li   r3,tix_tail
-       li   r4,132
+       li   r4,132*16
        mov  r4,@tix_x
-       li   r5,132
+       li   r5,132*16
        mov  r5,@tix_y
 init_game_1:
        mov  r5,*r3+
        mov  r4,*r3+
-;       a    r0,r4
-;       a    r1,r5
        dec  r2
        jne init_game_1
        .endproc
@@ -412,13 +416,26 @@ move_tix:
        li   r0,tix_tail+tix_tail_size-4
 move_tix_0:
        mov  r0,@tix_tail_pointer
-       mov  @tix_y,*r0+
-       mov  @tix_x,*r0+
+       mov  @tix_y,r1
+       srl  r1,4
+       mov  r1,*r0+
+       mov  @tix_x,r1
+       srl  r1,4
+       mov  r1,*r0+
+*      Choose direction
+
+
+
+*      Acceleration
+       a    @tix_ax,@tix_dx
+       a    @tix_ay,@tix_dy
 *      Check position
        mov  @tix_dx,r0
-;       sla  r0,3
+       sra  r0,4
        a    @tix_x,r0
+       sra  r0,4
        mov  @tix_y,r1
+       sra  r1,4
        bl   @get_char
        movb r1,r1
        jeq  move_tix_1
@@ -426,17 +443,24 @@ move_tix_0:
        jmp  move_tix_3
 move_tix_1:
        mov  @tix_x,r0
+       sra  r0,4
        mov  @tix_dy,r1
-;       sla  r1,3
+       sra  r1,4
        a    @tix_y,r1
+       sra  r1,4
        bl   @get_char
        movb r1,r1
        jeq  move_tix_2
        neg  @tix_dy
        jmp  move_tix_3
+*      Move
 move_tix_2:
-       a    @tix_dx,@tix_x
-       a    @tix_dy,@tix_y
+       mov  @tix_dx,r0
+       sra  r0,4
+       a    r0,@tix_x
+       mov  @tix_dy,r1
+       sra  r1,4
+       a    r1,@tix_y
 move_tix_3:
        .endproc
 *// move_tix
