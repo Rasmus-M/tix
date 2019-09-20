@@ -117,8 +117,12 @@ tix_ay:                                ; FP 8.8
        equ  tix_ax+2
 tix_tail_pointer:
        equ  tix_ay+2
-upload_map_pad:
+tix_addr:
        equ  tix_tail_pointer+2
+tix_char:
+       equ  tix_addr+2
+upload_map_pad:
+       equ  tix_char+2
 pad_max:
        equ  upload_map_pad+16
 
@@ -409,7 +413,40 @@ plot_trail_2:
 *
 move_tix:
        .proc
+*      Move towards player
+       mov  @trail_pointer,r0
+       jeq  move_tix_5
+       mov  @x,r0
+       sla  r0,4
+       s    @tix_x,r0
+       sra  r0,6
+       mov  r0,@tix_ax
+       mov  @y,r1
+       sla  r1,4
+       s    @tix_y,r1
+       sra  r1,6
+       mov  r1,@tix_ay
+       jmp  move_tix_0
+move_tix_5:
+       clr  @tix_ax
+       clr  @tix_ay
+       mov  @tix_dx,r0
+       abs  r0
+       ci   r0,>0200
+       jlt  move_tix_6
+       mov  @tix_dx,r0
+       sra  r0,1
+       mov  r0,@tix_dx
+move_tix_6:
+       mov  @tix_dy,r1
+       abs  r1
+       ci   r1,>0200
+       jlt  move_tix_0
+       mov  @tix_dy,r1
+       sra  r1,1
+       mov  r1,@tix_dy
 *      Acceleration
+move_tix_0:
        a    @tix_ax,@tix_dx            ; dx FP 8.8
        a    @tix_ay,@tix_dy            ; dy FP 8.8
 *      Velocity
@@ -424,13 +461,14 @@ move_tix:
        sra  r4,4                       ; Moved x
        mov  r3,r5
        sra  r5,4                       ; Moved y
-*      Check position
+*      Check moved position for collision
        mov  r4,r0                      ; Moved x
        mov  @tix_y,r1
        sra  r1,4                       ; Unmoved y
        bl   @get_char
        movb r1,r1
        jeq  move_tix_1
+*      Collision vertical
        neg  @tix_dx
        jmp  move_tix_3
 move_tix_1:
@@ -440,6 +478,7 @@ move_tix_1:
        bl   @get_char
        movb r1,r1
        jeq  move_tix_2
+*      Collision horizontal
        neg  @tix_dy
        jmp  move_tix_3
 *      Move
@@ -451,9 +490,9 @@ move_tix_3:
        mov  @tix_tail_pointer,r0
        ai   r0,-4
        ci   r0,tix_tail
-       jhe  move_tix_0
+       jhe  move_tix_4
        li   r0,tix_tail+tix_tail_size-4
-move_tix_0:
+move_tix_4:
        mov  r0,@tix_tail_pointer
        mov  r5,*r0+                    ; y
        mov  r4,*r0+                    ; x
@@ -738,8 +777,12 @@ mark_tix:
        .push r0
        .push r1
        mov  @tix_x,r0
+       srl  r0,4
        mov  @tix_y,r1
-       bl   @map_address
+       srl  r1,4
+       bl   @get_char
+       mov  r0,@tix_addr
+       movb r1,@tix_char
        movb @b_tix,*r0
        .pop r1
        .pop r0
@@ -751,12 +794,9 @@ mark_tix:
 * Unmark tix on map
 *
 unmark_tix:
-       .proc
-       mov  @tix_x,r0
-       mov  @tix_y,r1
-       bl   @map_address
-       movb @b_black,*r0
-       .endproc
+       mov  @tix_addr,r0
+       movb @tix_char,*r0
+       rt
 *// unmark_tix
 
 *********************************************************************
