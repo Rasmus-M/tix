@@ -409,33 +409,25 @@ plot_trail_2:
 *
 move_tix:
        .proc
-       mov  @tix_tail_pointer,r0
-       ai   r0,-4
-       ci   r0,tix_tail
-       jhe  move_tix_0
-       li   r0,tix_tail+tix_tail_size-4
-move_tix_0:
-       mov  r0,@tix_tail_pointer
-       mov  @tix_y,r1
-       srl  r1,4
-       mov  r1,*r0+
-       mov  @tix_x,r1
-       srl  r1,4
-       mov  r1,*r0+
-*      Choose direction
-
-
-
 *      Acceleration
-       a    @tix_ax,@tix_dx
-       a    @tix_ay,@tix_dy
+       a    @tix_ax,@tix_dx            ; dx FP 8.8
+       a    @tix_ay,@tix_dy            ; dy FP 8.8
+*      Velocity
+       mov  @tix_dx,r2
+       sra  r2,4
+       a    @tix_x,r2                  ; Moved x FP 12.4
+       mov  @tix_dy,r3
+       sra  r3,4
+       a    @tix_y,r3                  ; Moved y FP 12.4
+*      Position
+       mov  r2,r4
+       sra  r4,4                       ; Moved x
+       mov  r3,r5
+       sra  r5,4                       ; Moved y
 *      Check position
-       mov  @tix_dx,r0
-       sra  r0,4
-       a    @tix_x,r0
-       sra  r0,4
+       mov  r4,r0                      ; Moved x
        mov  @tix_y,r1
-       sra  r1,4
+       sra  r1,4                       ; Unmoved y
        bl   @get_char
        movb r1,r1
        jeq  move_tix_1
@@ -443,11 +435,8 @@ move_tix_0:
        jmp  move_tix_3
 move_tix_1:
        mov  @tix_x,r0
-       sra  r0,4
-       mov  @tix_dy,r1
-       sra  r1,4
-       a    @tix_y,r1
-       sra  r1,4
+       sra  r0,4                       ; Unmoved x
+       mov  r5,r1                      ; Moved y
        bl   @get_char
        movb r1,r1
        jeq  move_tix_2
@@ -455,13 +444,19 @@ move_tix_1:
        jmp  move_tix_3
 *      Move
 move_tix_2:
-       mov  @tix_dx,r0
-       sra  r0,4
-       a    r0,@tix_x
-       mov  @tix_dy,r1
-       sra  r1,4
-       a    r1,@tix_y
+       mov  r2,@tix_x
+       mov  r3,@tix_y
 move_tix_3:
+*      Save current position in the tail list
+       mov  @tix_tail_pointer,r0
+       ai   r0,-4
+       ci   r0,tix_tail
+       jhe  move_tix_0
+       li   r0,tix_tail+tix_tail_size-4
+move_tix_0:
+       mov  r0,@tix_tail_pointer
+       mov  r5,*r0+                    ; y
+       mov  r4,*r0+                    ; x
        .endproc
 *// move_tix
 
