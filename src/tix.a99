@@ -58,6 +58,8 @@ tix_tail_size:
        equ  128
 top_height:
        equ  32
+middle_y:
+       equ  (192-top_height)/2
 sprite_patters:
        equ  5
 char_patterns:
@@ -368,18 +370,18 @@ move_player_3:
 *      Scroll
 move_player_4:
        mov  @y,r0
-       ci   r0,96
+       ci   r0,middle_y
        jhe  move_player_5
        clr  r0
        jmp  move_player_7
 move_player_5:
-       ci   r0,map_height_pixels-96
+       ci   r0,map_height_pixels-middle_y
        jlt  move_player_6
-       li   r0,map_height_pixels-192
+       li   r0,map_height_pixels-(192-top_height)
        jmp  move_player_7
 move_player_6:
        mov  @y,r0
-       ai   r0,-96
+       ai   r0,-middle_y
 move_player_7:
        mov  r0,@scroll_y
 move_player_8:
