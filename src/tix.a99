@@ -270,16 +270,14 @@ user_input:
        mov  @x,r0
        andi r0,7
        ci   r0,4
-       jne  user_input_5
+       jne  user_input_7
        mov  @y,r1
        andi r1,7
        ci   r1,4
-       jne  user_input_5
+       jne  user_input_7
        seto @char_aligned
-       mov  @dx,@old_dx
-       mov  @dy,@old_dy
-       clr  @dx
-       clr  @dy
+       clr  r2
+       clr  r3
        li   r0,JOY_FI
        bl   @check_key
 *      Fire
@@ -289,30 +287,36 @@ user_input_1:
 *      Left
        tb   1
        jeq  user_input_2
-       li   r0,-1
-       mov  r0,@dx
+       li   r2,-1
        jmp  user_input_5
 user_input_2:
 *      Right
        tb   2
        jeq  user_input_3
-       li   r0,1
-       mov  r0,@dx
+       li   r2,1
        jmp  user_input_5
 user_input_3:
 *      Down
        tb   3
        jeq  user_input_4
-       li   r0,1
-       mov  r0,@dy
+       li   r3,1
        jmp  user_input_5
 user_input_4:
 *      Up
        tb   4
        jeq  user_input_5
-       li   r0,-1
-       mov  r0,@dy
+       li   r3,-1
 user_input_5:
+       abs  @fire
+       jeq  user_input_6
+       sla  r2,1
+       sla  r3,1
+user_input_6:
+       mov  @dx,@old_dx
+       mov  @dy,@old_dy
+       mov  r2,@dx
+       mov  r3,@dy
+user_input_7
        .endproc
 *// user_input
 
