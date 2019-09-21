@@ -592,25 +592,15 @@ upload_map:
        bl   @upload_map_pad
        .endproc
 upload_map_1:
-;       movb *r1+,r3
-;       sla  r3,2
-;       socb *r0+,r3
-;       ab   r5,r3
-;       movb r3,*r4
-;       dec  r2
-;       jne  upload_map_1
-;       rt
-
-       mov  *r1+,r3
-       sla  r3,2
-       soc  *r0+,r3
-       a    r5,r3
-       movb r3,*r4
-       movb @r3lb,*r4
-       dect r2
-       jne  upload_map_1
+       mov  *r1+,r3                    ; Get 2 bytes from row 1
+       sla  r3,2                       ; Shift up
+       soc  *r0+,r3                    ; Combine with two bytes from row 2
+       a    r5,r3                      ; Add scroll offset
+       movb r3,*r4                     ; Send one byte to VDP
+       movb @r3lb,*r4                  ; Send the other byte to VDP
+       dect r2                         ; Counter
+       jne  upload_map_1               ; Loop
        rt
-
 upload_map_2
 *// upload_map
 
