@@ -588,18 +588,29 @@ upload_map:
        dec  r5
        andi r5,7
        sla  r5,4
-       swpb r5
+       movb @r5lb,r5
        bl   @upload_map_pad
        .endproc
 upload_map_1:
-       movb *r1+,r3
+;       movb *r1+,r3
+;       sla  r3,2
+;       socb *r0+,r3
+;       ab   r5,r3
+;       movb r3,*r4
+;       dec  r2
+;       jne  upload_map_1
+;       rt
+
+       mov  *r1+,r3
        sla  r3,2
-       socb *r0+,r3
-       ab   r5,r3
+       soc  *r0+,r3
+       a    r5,r3
        movb r3,*r4
-       dec  r2
+       movb @r3lb,*r4
+       dect r2
        jne  upload_map_1
        rt
+
 upload_map_2
 *// upload_map
 
