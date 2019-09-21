@@ -56,6 +56,14 @@ tix:
        equ  >ff
 tix_tail_size:
        equ  128
+top_height:
+       equ  32
+sprite_patters:
+       equ  5
+char_patterns:
+       equ  4
+font_patterns:
+       equ  76
 
 **
 * Scratch pad
@@ -209,6 +217,14 @@ init_game_1:
        mov  r4,*r3+
        dec  r2
        jne init_game_1
+       li   r0,namet1
+       li   r1,top
+       li   r2,top_height/8*32
+       bl   @vmbw
+       li   r0,namet2
+       li   r1,top
+       li   r2,top_height/8*32
+       bl   @vmbw
        .endproc
 *// init_game
 
@@ -511,7 +527,7 @@ upload_sprites:
 *      Player
        mov  @y,r1
        s    @scroll_y,r1
-       ai   r1,-5
+       ai   r1,top_height-5
        swpb r1
        movb r1,*r0
        mov  @x,r1
@@ -529,8 +545,8 @@ upload_sprites:
 upload_sprites_1:
        mov  *r3+,r1
        s    @scroll_y,r1
-       ai   r1,-9
-       ci   r1,-16
+       ai   r1,top_height-9
+       ci   r1,top_height
        jlt  upload_sprites_2
        ci   r1,191
        jgt  upload_sprites_2
@@ -571,11 +587,11 @@ upload_map:
        mov  @name_table_flag,r0
        andi r0,>0001
        sla  r0,10
-       ai   r0,namet1
+       ai   r0,namet1+(32*top_height/8)
        bl   @vwad
        li   r0,map
        li   r1,map+32
-       li   r2,768
+       li   r2,32*(192-top_height)/8
        clr  r3
        li   r4,vdpwd
        mov  @scroll_y,r5
@@ -840,9 +856,25 @@ one_time_init:
        li   r1,colors
        li   r2,8*8*16
        bl   @vmbw
+       li   r0,ptrntb+>400
+       li   r1,PAT128
+       li   r2,font_patterns*8
+       bl   @vmbw
+       li   r0,ptrntb+>c00
+       li   r1,PAT128
+       li   r2,font_patterns*8
+       bl   @vmbw
+       li   r0,ptrntb+>1400
+       li   r1,PAT128
+       li   r2,font_patterns*8
+       bl   @vmbw
+       li   r0,colrtb+>400
+       li   r1,COL128
+       li   r2,font_patterns*8
+       bl   @vmbw
        li   r0,sprptb
        li   r1,SPR0
-       li   r2,5*32
+       li   r2,sprite_patters*32
        bl   @vmbw
        li   r0,spratb
        li   r1,>d000
@@ -1160,6 +1192,8 @@ b_tix:
 
        copy "chars.a99"
        copy "sprites.a99"
+       copy "font.a99"
+       copy "top.a99"
 
 * One extra map row to support scrolling
        DATA >0101,>0101,>0101,>0101    ;
