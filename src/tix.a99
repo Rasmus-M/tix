@@ -65,7 +65,7 @@ sprite_patters:
 char_patterns:
        equ  4
 font_patterns:
-       equ  76
+       equ  96
 
 **
 * Scratch pad
