@@ -134,7 +134,7 @@ tix_char:
 upload_map_pad:
        equ  tix_char+2
 pad_max:
-       equ  upload_map_pad+16
+       equ  upload_map_pad+18
 
 **
 * Macros
@@ -611,6 +611,7 @@ upload_map:
        andi r5,7
        sla  r5,4
        movb @r5lb,r5
+       li   r6,r3lb
        bl   @upload_map_pad
        .endproc
 upload_map_1:
@@ -619,7 +620,7 @@ upload_map_1:
        soc  *r0+,r3                    ; Combine with two bytes from row 2
        a    r5,r3                      ; Add scroll offset
        movb r3,*r4                     ; Send one byte to VDP
-       movb @r3lb,*r4                  ; Send the other byte to VDP
+       movb *r6,*r4                    ; Send the other byte to VDP
        dect r2                         ; Counter
        jne  upload_map_1               ; Loop
        rt
