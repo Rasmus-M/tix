@@ -61,7 +61,7 @@ top_height:
 middle_y:
        equ  (192-top_height)/2
 sprite_patters:
-       equ  5
+       equ  12
 char_patterns:
        equ  4
 font_patterns:
@@ -89,8 +89,10 @@ padvar equ  stack+>20                  ; Start of pad variables
 **
 * PAD variables
 *
-x:
+frame:
        equ  padvar+2
+x:
+       equ  frame+2
 y:
        equ  x+2
 dx:
@@ -183,6 +185,7 @@ loop:
        bl   @move_tix
        bl   @upload_sprites
        bl   @upload_map
+       inc  @frame
        jmp  loop
 
 *********************************************************************
@@ -191,6 +194,7 @@ loop:
 *
 init_game:
        .proc
+       clr  @frame
        clr  @scroll_y
        clr  @name_table_flag
        clr  @trail_pointer
@@ -533,14 +537,22 @@ upload_sprites:
 *      Player
        mov  @y,r1
        s    @scroll_y,r1
-       ai   r1,top_height-5
+       ai   r1,top_height-9
        swpb r1
        movb r1,*r0
+       li   r2,>000d
        mov  @x,r1
-       ai   r1,-4
+       ai   r1,-8
+       jgt  upload_sprites_0
+       ai   r1,32
+       ori  r2,>0080
+upload_sprites_0
        swpb r1
        mov  r1,*r0
-       li   r1,>100d
+       mov  @frame,r1
+       andi r1,>000c
+       swpb r1
+       soc  r2,r1
        movb r1,*r0
        swpb r1
        mov  r1,*r0
@@ -581,7 +593,7 @@ upload_sprites_4:
        movb r1,*r0
        .endproc
 tix_attr:
-       data >000c,>0402,>0803,>0C0e
+       data >100c,>1402,>1803,>1C0e
 *// upload_sprites
 
 *********************************************************************
