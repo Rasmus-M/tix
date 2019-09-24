@@ -1,4 +1,4 @@
-xas99.py -R -L tix.lst src/tix.a99
+xas99.py -R -S -L tix.lst src/tix.a99
 
 xas99.py -R -i src/tix.a99 -o bin/TIX
 

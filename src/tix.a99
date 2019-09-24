@@ -91,26 +91,28 @@ padvar equ  stack+>20                  ; Start of pad variables
 *
 frame:
        equ  padvar+2
-x:
-       equ  frame+2
 y:
-       equ  x+2
-dx:
+       equ  frame+2
+x:
        equ  y+2
 dy:
-       equ  dx+2
-old_dx:
+       equ  x+2
+dx:
        equ  dy+2
 old_dy:
-       equ  old_dx+2
-fire:
+       equ  dx+2
+old_dx:
        equ  old_dy+2
+fire:
+       equ  old_dx+2
 char_aligned:
        equ  fire+2
 trail_pointer:
        equ  char_aligned+2
-scroll_y:
+inactivity_time:
        equ  trail_pointer+2
+scroll_y:
+       equ  inactivity_time+2
 name_table_flag:
        equ  scroll_y+2
 vdp_status:
@@ -133,8 +135,32 @@ tix_addr:
        equ  tix_tail_pointer+2
 tix_char:
        equ  tix_addr+2
-upload_map_pad:
+spark_1_y:
        equ  tix_char+2
+spark_1_x:
+       equ  spark_1_y+2
+spark_1_dy:
+       equ  spark_1_x+2
+spark_1_dx:
+       equ  spark_1_dy+2
+spark_2_y:
+       equ  spark_1_dx+2
+spark_2_x:
+       equ  spark_2_y+2
+spark_2_dy:
+       equ  spark_2_x+2
+spark_2_dx:
+       equ  spark_2_dy+2
+fuse_y:
+       equ  spark_2_dx+2
+fuse_x:
+       equ  fuse_y+2
+fuse_dy:
+       equ  fuse_x+2
+fuse_dx:
+       equ  fuse_dy+2
+upload_map_pad:
+       equ  fuse_dx+2
 pad_max:
        equ  upload_map_pad+18
 
@@ -183,6 +209,8 @@ loop:
        bl   @move_player
        bl   @plot_trail
        bl   @move_tix
+       bl   @update_sparks
+       bl   @update_fuse
        bl   @upload_sprites
        bl   @upload_map
        inc  @frame
@@ -198,6 +226,7 @@ init_game:
        clr  @scroll_y
        clr  @name_table_flag
        clr  @trail_pointer
+       clr  @inactivity_time
        li   r0,tix_tail
        mov  r0,@tix_tail_pointer
 *      Player
@@ -231,7 +260,14 @@ init_game_1:
        li   r1,top
        li   r2,top_height/8*32
        bl   @vmbw
+*      Sparks
+       li   r0,spark_init
+       li   r1,spark_1_y
+       li   r2,16
+       bl   @copy
        .endproc
+spark_init:
+       data 76,4,-1,0,76,252,1,0
 *// init_game
 
 *********************************************************************
@@ -320,7 +356,16 @@ user_input_6:
        mov  @dy,@old_dy
        mov  r2,@dx
        mov  r3,@dy
-user_input_7
+user_input_7:
+       mov  r2,r0
+       jne  user_input_8
+       mov  r3,r0
+       jne  user_input_8
+       inc  @inactivity_time
+       jmp  user_input_9
+user_input_8:
+       clr  @inactivity_time
+user_input_9:
        .endproc
 *// user_input
 
@@ -527,6 +572,34 @@ move_tix_4:
 
 *********************************************************************
 *
+* Update sparks
+*
+update_sparks:
+       .proc
+       li   r2,2
+       li   r3,spark_1_y
+       li   r4,spark_1_dy
+update_sparks_1:
+       a    *r4+,*r3+                  ; y += dy
+       a    *r4+,*r3+                  ; x += dx
+       c    *r4+,*r3+                  ; Skip
+       c    *r4+,*r3+                  ; Skip
+       dec  r2
+       jne  update_sparks_1
+       .endproc
+*// update_sparks
+
+*********************************************************************
+*
+* Update fuse
+*
+update_fuse:
+       .proc
+       .endproc
+*// update_fuse
+
+*********************************************************************
+*
 * Upload sprites
 *
 upload_sprites:
@@ -535,27 +608,9 @@ upload_sprites:
        bl   @vwad
        li   r0,vdpwd
 *      Player
-       mov  @y,r1
-       s    @scroll_y,r1
-       ai   r1,top_height-9
-       swpb r1
-       movb r1,*r0
-       li   r2,>000d
-       mov  @x,r1
-       ai   r1,-8
-       jgt  upload_sprites_0
-       ai   r1,32
-       ori  r2,>0080
-upload_sprites_0
-       swpb r1
-       mov  r1,*r0
-       mov  @frame,r1
-       andi r1,>000c
-       swpb r1
-       soc  r2,r1
-       movb r1,*r0
-       swpb r1
-       mov  r1,*r0
+       li   r3,y
+       li   r4,>000d
+       bl   @upload_sprite
 *      Tix
        li   r2,4
        mov  @tix_tail_pointer,r3
@@ -588,6 +643,15 @@ upload_sprites_3:
 upload_sprites_4:
        dec  r2
        jne  upload_sprites_1
+*      Sparks
+       li   r3,spark_1_y
+       li   r4,>200b
+       li   r5,2
+upload_sprites_5:
+       bl   @upload_sprite
+       c    *r3+,*r3+                  ; Skip 4 bytes
+       dec  r5
+       jne  upload_sprites_5
 *      End marker
        li   r1,>d000
        movb r1,*r0
@@ -595,6 +659,38 @@ upload_sprites_4:
 tix_attr:
        data >100c,>1402,>1803,>1C0e
 *// upload_sprites
+
+*********************************************************************
+*
+* Upload sprite
+*
+* r3: points to y
+* r4: contains base pattern and color
+*
+upload_sprite:
+       mov  *r3+,r1                    ; y
+       s    @scroll_y,r1
+       ai   r1,top_height-9
+       swpb r1
+       movb r1,*r0
+       mov  r4,r2                      ; Pattern and color
+       mov  *r3+,r1                    ; x
+       ai   r1,-8
+       jgt  upload_sprite_1
+       ai   r1,32                      ; EC
+       ori  r2,>0080
+upload_sprite_1:
+       swpb r1
+       mov  r1,*r0
+       mov  @frame,r1                  ; Animation frame
+       andi r1,>000c
+       swpb r1                         ; Pattern
+       soc  r2,r1
+       movb r1,*r0
+       swpb r1                         ; Color
+       mov  r1,*r0
+       rt
+*// upload_sprite
 
 *********************************************************************
 *
