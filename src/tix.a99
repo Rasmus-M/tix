@@ -61,7 +61,7 @@ top_height:
 middle_y:
        equ  (192-top_height)/2
 sprite_patters:
-       equ  12
+       equ  16
 char_patterns:
        equ  4
 font_patterns:
