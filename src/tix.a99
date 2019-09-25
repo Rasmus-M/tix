@@ -613,7 +613,6 @@ update_sparks_2:
        jmp  update_sparks_6a
 update_sparks_3:
        clr  r1
-       jmp  update_sparks_6a
 *      X movement
 update_sparks_4:
        mov  @x,r0
@@ -621,21 +620,40 @@ update_sparks_4:
        jeq  update_sparks_6
        jlt  update_sparks_5
        cb   @1(r5),@b_white
-       jne  update_sparks_6b
+       jne  update_sparks_6
        li   r0,1
        jmp  update_sparks_6b
 update_sparks_5:
        cb   @-1(r5),@b_white
-       jne  update_sparks_6b
+       jne  update_sparks_6
        li   r0,-1
        jmp  update_sparks_6b
 update_sparks_6:
        clr  r0
        jmp  update_sparks_6b
-*      Save dy and dx
+*      Check if moving
 update_sparks_6a:
        inct r3                         ; Adjust to dy
 update_sparks_6b:
+       mov  r1,r1
+       jne  update_sparks_6c
+       mov  r0,r0
+       jne  update_sparks_6c
+*      Not moving - try using old dy and dx
+       mov  *r4+,r1                    ; y
+       a    *r3+,r1                    ; y + dy
+       mov  *r4+,r0                    ; x
+       a    *r3+,r0                    ; x + dx
+       mov  r4,r3                      ; Back to dy
+       ai   r4,-4                      ; Back to y
+       bl   @get_char
+       cb   r1,@b_white
+       jeq  update_sparks_8
+       clr  *r4+                       ; dy = 0
+       clr  *r4+                       ; dx = 0
+       jmp  update_sparks_9
+*      Save dy and dx
+update_sparks_6c:
        mov  r1,*r3+                    ; Save dy
        mov  r0,*r3                     ; Save dx
        dect r3                         ; Back to dy
@@ -682,9 +700,8 @@ upload_sprites:
 upload_sprites_1:
        mov  *r3+,r1
        s    @scroll_y,r1
-       ai   r1,top_height-9
-       ci   r1,top_height
        jlt  upload_sprites_2
+       ai   r1,top_height-9
        ci   r1,191
        jgt  upload_sprites_2
        swpb r1
@@ -734,6 +751,7 @@ tix_attr:
 upload_sprite:
        mov  *r3+,r1                    ; y
        s    @scroll_y,r1
+       jlt  upload_sprite_2
        ai   r1,top_height-9
        swpb r1
        movb r1,*r0
@@ -753,6 +771,10 @@ upload_sprite_1:
        movb r1,*r0
        swpb r1                         ; Color
        mov  r1,*r0
+       jmp  upload_sprite_3
+upload_sprite_2:
+       inct r3
+upload_sprite_3:
        rt
 *// upload_sprite
 
