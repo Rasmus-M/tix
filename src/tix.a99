@@ -267,7 +267,7 @@ init_game_1:
        bl   @copy
        .endproc
 spark_init:
-       data 76,4,0,0,76,252,0,0
+       data 76,4,-1,0,76,252,1,0
 *// init_game
 
 *********************************************************************
@@ -384,8 +384,8 @@ move_player:
        mov  @dy,r1
        sla  r1,3
        a    @y,r1
-       bl   @get_char
-       movb r1,r1
+       bl   @map_address
+       movb *r0,r1
        jeq  move_player_2
        cb   r1,@b_white
        jne  move_player_1
@@ -451,8 +451,8 @@ plot_trail:
        jeq  plot_trail_2
        mov  @x,r0
        mov  @y,r1
-       bl   @get_char
-       movb r1,r1
+       bl   @map_address
+       movb *r0,r1
        jne  plot_trail_1
 *      Empty position
        mov  @trail_pointer,r1
@@ -536,8 +536,8 @@ move_tix_0:
        mov  r4,r0                      ; Moved x
        mov  @tix_y,r1
        sra  r1,4                       ; Unmoved y
-       bl   @get_char
-       movb r1,r1
+       bl   @map_address
+       movb *r0,r1
        jeq  move_tix_1
 *      Collision vertical
        neg  @tix_dx
@@ -546,8 +546,8 @@ move_tix_1:
        mov  @tix_x,r0
        sra  r0,4                       ; Unmoved x
        mov  r5,r1                      ; Moved y
-       bl   @get_char
-       movb r1,r1
+       bl   @map_address
+       movb *r0,r1
        jeq  move_tix_2
 *      Collision horizontal
        neg  @tix_dy
@@ -577,9 +577,9 @@ move_tix_4:
 update_sparks:
        .proc
        li   r2,2
-       li   r3,spark_1_y
+       li   r3,spark_1_y               ; Ptr y
 update_sparks_1:
-       mov  r3,r4
+       mov  r3,r4                      ; Ptr y
 *      Check if aligned
        mov  *r3+,r1                    ; y
        andi r1,7
@@ -589,25 +589,47 @@ update_sparks_1:
        andi r0,7
        ci   r0,4
        jne  update_sparks_8
-*      Yes - aligned
-       mov  r4,r3
-       mov  *r3+,r1
-       mov  *r3+,r0
+*      Aligned
+*      Check if it's OK to continue moving
+       mov  r4,r3                      ; Ptr y
+       ai   r3,4                       ; Ptr dy
+       mov  *r3+,r1                    ; dy
+       sla  r1,3                       ; dy * 8
+       a    *r4+,r1                    ; dy * 8 + y
+       jlt  update_sparks_10
+       ci   r1,map_height_pixels
+       jhe  update_sparks_10
+       mov  *r3+,r0                    ; dx
+       sla  r0,3                       ; dx * 8
+       a    *r4+,r0                    ; dx * 8 + x
+       jlt  update_sparks_10
+       ci   r0,map_width_pixels
+       jhe  update_sparks_10
        bl   @map_address
-       mov  r0,r5                      ; Map address
-       mov  r4,r3
-       clr  r0                         ; dx
+       mov  r4,r3                      ; Ptr dy
+       ai   r4,-4                      ; Ptr y
+       cb   *r0,@b_white
+       jeq  update_sparks_8
+*      Move towards player
+update_sparks_10:
+       mov  r4,r3                      ; Ptr y
+       mov  *r3+,r1                    ; y
+       mov  *r3+,r0                    ; x
+       bl   @map_address
+       mov  r0,r7                      ; Map address
+       mov  r4,r3                      ; Ptr y
+       clr  r0                         ; dx = 0
 *      Y movement
-       mov  @y,r1
+       mov  @y,r1                      ; Player y
        s    *r3+,r1                    ; Player y - spark y
        jeq  update_sparks_4
        jlt  update_sparks_2
-       cb   @map_width(r5),@b_white
+       cb   @map_width(r7),@b_white
        jne  update_sparks_3
        li   r1,1
        jmp  update_sparks_6a
 update_sparks_2:
-       cb   @-map_width(r5),@b_white
+       cb   @-map_width(r7),@b_white
        jne  update_sparks_3
        li   r1,-1
        jmp  update_sparks_6a
@@ -615,54 +637,35 @@ update_sparks_3:
        clr  r1
 *      X movement
 update_sparks_4:
-       mov  @x,r0
-       s    *r3+,r0
+       mov  @x,r0                      ; Player x
+       s    *r3+,r0                    ; PLayer x - spark x
        jeq  update_sparks_6
        jlt  update_sparks_5
-       cb   @1(r5),@b_white
+       cb   @1(r7),@b_white
        jne  update_sparks_6
        li   r0,1
-       jmp  update_sparks_6b
+       jmp  update_sparks_6c
 update_sparks_5:
-       cb   @-1(r5),@b_white
+       cb   @-1(r7),@b_white
        jne  update_sparks_6
        li   r0,-1
-       jmp  update_sparks_6b
+       jmp  update_sparks_6c
 update_sparks_6:
        clr  r0
-       jmp  update_sparks_6b
-*      Check if moving
+       jmp  update_sparks_6c
 update_sparks_6a:
        inct r3                         ; Adjust to dy
-update_sparks_6b:
-       mov  r1,r1
-       jne  update_sparks_6c
-       mov  r0,r0
-       jne  update_sparks_6c
-*      Not moving - try using old dy and dx
-       mov  *r4+,r1                    ; y
-       a    *r3+,r1                    ; y + dy
-       mov  *r4+,r0                    ; x
-       a    *r3+,r0                    ; x + dx
-       mov  r4,r3                      ; Back to dy
-       ai   r4,-4                      ; Back to y
-       bl   @get_char
-       cb   r1,@b_white
-       jeq  update_sparks_8
-       clr  *r4+                       ; dy = 0
-       clr  *r4+                       ; dx = 0
-       jmp  update_sparks_9
 *      Save dy and dx
 update_sparks_6c:
        mov  r1,*r3+                    ; Save dy
        mov  r0,*r3                     ; Save dx
-       dect r3                         ; Back to dy
+       dect r3                         ; Ptr dy
        jmp  update_sparks_8
 *      Not aligned
 update_sparks_7:
        inct r3                         ; Adjust to dy
 *      Move
-update_sparks_8:
+update_sparks_8:                       ; r3 == ptr dy && r4 == ptr y
        a    *r3+,*r4+                  ; y = y + dy
        a    *r3+,*r4+                  ; x = x + dx
 update_sparks_9:
