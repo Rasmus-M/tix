@@ -916,23 +916,30 @@ upload_map_2
 fill_closure:
        .proc
        bl   @save_map
+       abs  @fire
+       jne  fill_closure_1
+       li   r9,blue*256
+       jmp  fill_closure_2
+fill_closure_1:
+       li   r9,red*256
+fill_closure_2:
 *      Fill to the right
        mov  @x,r0
        mov  @y,r1
        mov  @old_dx,r2
-       sla  r2,3
        mov  @old_dy,r3
+       sla  r2,3
        sla  r3,3
        s    r2,r0                      ; Backtrack one tile
        s    r3,r1
        s    r3,r0                      ; One tile to the right
        a    r2,r1
-       li   r2,blue*256
+       mov  r9,r2
        li   r3,white*256
        bl   @flood_fill
        mov  r4,r4
-       jgt  fill_closure_1
-       jeq  fill_closure_1
+       jgt  fill_closure_3
+       jeq  fill_closure_3
 *      Fill to the left
        bl   @restore_map
        mov  @x,r0
@@ -945,10 +952,10 @@ fill_closure:
        s    r3,r1
        a    r3,r0                      ; One tile to the left
        s    r2,r1
-       li   r2,red*256
+       mov  r9,r2
        li   r3,white*256
        bl   @flood_fill
-fill_closure_1:
+fill_closure_3:
        .endproc
 *// fill_closure
 
