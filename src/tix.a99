@@ -39,11 +39,11 @@ spratb equ  >3000                      ; Sprite attribute table base
 map_width:
        equ  32
 map_width_pixels:
-       equ  256
+       equ  map_width*8
 map_height:
-       equ  64
+       equ  40
 map_height_pixels:
-       equ  512
+       equ  map_height*8
 black:
        equ  0
 white:
@@ -66,6 +66,8 @@ char_patterns:
        equ  4
 font_patterns:
        equ  96
+flood_fill_stack_size:
+       equ  512
 
 **
 * Scratch pad
@@ -229,6 +231,7 @@ init_game:
        clr  @inactivity_time
        li   r0,tix_tail
        mov  r0,@tix_tail_pointer
+       bl   @init_map
 *      Player
        li   r0,132
        mov  r0,@x
@@ -269,6 +272,45 @@ init_game_1:
 spark_init:
        data 76,4,-1,0,76,252,1,0
 *// init_game
+
+*********************************************************************
+*
+* Init map
+*
+init_map:
+       li   r0,white*256
+*      Top
+       li   r1,map
+       li   r2,map_width
+init_map_1:
+       movb r0,*r1+
+       dec  r2
+       jne  init_map_1
+*      Bottom
+       li   r1,map+((map_height-1)*map_width)
+       li   r2,map_width
+init_map_2:
+       movb r0,*r1+
+       dec  r2
+       jne  init_map_2
+*      Left
+       li   r1,map
+       li   r2,map_height
+init_map_3:
+       movb r0,*r1
+       ai   r1,map_width
+       dec  r2
+       jne  init_map_3
+*      Right
+       li   r1,map+(map_width-1)
+       li   r2,map_height
+init_map_4:
+       movb r0,*r1
+       ai   r1,map_width
+       dec  r2
+       jne  init_map_4
+       rt
+*// init_map
 
 *********************************************************************
 *
@@ -1448,12 +1490,11 @@ b_tix:
        DATA >0101,>0101,>0101,>0101    ;
        DATA >0101,>0101,>0101,>0101    ;
 map:
-       copy "map-empty.a99"
+       bss  map_width*map_height
 map_backup:
        bss  map_width*map_height
-
 flood_fill_stack:
-       bss  2*768
+       bss  flood_fill_stack_size
 trail:
        bss  512
 tix_tail:
