@@ -602,32 +602,36 @@ update_sparks_2:
        mov  r5,r3                      ; Ptr y
        mov  *r4,r1                     ; dy
        jne  update_sparks_7
-*      Y movement
+*      Moving in x, check if we can move up/down
        clr  r0                         ; dx = 0
        mov  @y,r1                      ; Player y
        s    *r3,r1                     ; Player y - y
-       jeq  update_sparks_12
+;       jeq  update_sparks_12
        jlt  update_sparks_4
+*      Try down
        cb   @map_width(r7),@b_white
        jne  update_sparks_3
        li   r1,1
        jmp  update_sparks_13
+*      Try up instead
 update_sparks_3:
-       mov  *r3,r7                     ; y
-       ci   r7,5
+       mov  *r3,r8                     ; y
+       ci   r8,5
        jlt  update_sparks_6
        cb   @-map_width(r7),@b_white
        jne  update_sparks_6
        li   r1,-1
        jmp  update_sparks_13
+*      Try up
 update_sparks_4:
        cb   @-map_width(r7),@b_white
        jne  update_sparks_5
        li   r1,-1
        jmp  update_sparks_13
+*      Try down instead
 update_sparks_5:
-       mov  *r3,r7                     ; y
-       ci   r7,map_height_pixels-5
+       mov  *r3,r8                     ; y
+       ci   r8,map_height_pixels-5
        jgt  update_sparks_6
        cb   @map_width(r7),@b_white
        jne  update_sparks_6
@@ -636,34 +640,38 @@ update_sparks_5:
 update_sparks_6:
        clr  r1
        jmp  update_sparks_12
-*      X movement
+*      Moving in y, check if we can move left/right
 update_sparks_7:
        clr  r1                         ; dy = 0
        inct r3
        mov  @x,r0                      ; Player x
        s    *r3,r0                     ; PLayer x - x
-       jeq  update_sparks_12
+;       jeq  update_sparks_12
        jlt  update_sparks_9
+*      Try right
        cb   @1(r7),@b_white
        jne  update_sparks_8
        li   r0,1
        jmp  update_sparks_13
+*      Try left instead
 update_sparks_8:
-       mov  *r3,r7                     ; x
-       ci   r7,5
+       mov  *r3,r8                     ; x
+       ci   r8,5
        jlt  update_sparks_11
        cb   @-1(r7),@b_white
        jne  update_sparks_11
        li   r0,-1
        jmp  update_sparks_13
+*      Try left
 update_sparks_9:
        cb   @-1(r7),@b_white
        jne  update_sparks_10
        li   r0,-1
        jmp  update_sparks_13
+*      Try right instead
 update_sparks_10:
-       mov  *r3,r7                     ; x
-       ci   r7,map_width_pixels-5
+       mov  *r3,r8                     ; x
+       ci   r8,map_width_pixels-5
        jgt  update_sparks_11
        cb   @1(r7),@b_white
        jne  update_sparks_11
@@ -788,6 +796,8 @@ upload_sprite:
        mov  *r3+,r1                    ; y
        s    @scroll_y,r1
        jlt  upload_sprite_2
+       ci   r1,(192-top_height)+8
+       jhe  upload_sprite_2
        ai   r1,top_height-9
        swpb r1
        movb r1,*r0
