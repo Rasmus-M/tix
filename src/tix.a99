@@ -161,8 +161,10 @@ fuse_dy:
        equ  fuse_x+2
 fuse_dx:
        equ  fuse_dy+2
-upload_map_pad:
+fuse_trail_pointer:
        equ  fuse_dx+2
+upload_map_pad:
+       equ  fuse_trail_pointer+2
 pad_max:
        equ  upload_map_pad+18
 
