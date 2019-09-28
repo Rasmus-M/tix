@@ -635,6 +635,7 @@ update_sparks_1:
        ci   r0,4
        jne  update_sparks_14
 *      Turn towards player
+       li   r12,white*256
 update_sparks_2:
        mov  r5,r3                      ; Ptr y
        mov  *r3+,r1                    ; y
@@ -648,37 +649,40 @@ update_sparks_2:
        clr  r0                         ; dx = 0
        mov  @y,r1                      ; Player y
        s    *r3,r1                     ; Player y - y
-;       jeq  update_sparks_12
        jlt  update_sparks_4
 *      Try down
-       cb   @map_width(r7),@b_white
+       ai   r7,map_width
+       cb   *r7,r12
        jne  update_sparks_3
        li   r1,1
-       jmp  update_sparks_13
+       jmp  update_sparks_11a
 *      Try up instead
 update_sparks_3:
        mov  *r3,r8                     ; y
        ci   r8,5
        jlt  update_sparks_6
-       cb   @-map_width(r7),@b_white
+       ai   r7,-2*map_width
+       cb   *r7,r12
        jne  update_sparks_6
        li   r1,-1
-       jmp  update_sparks_13
+       jmp  update_sparks_11a
 *      Try up
 update_sparks_4:
-       cb   @-map_width(r7),@b_white
+       ai   r7,-map_width
+       cb   *r7,r12
        jne  update_sparks_5
        li   r1,-1
-       jmp  update_sparks_13
+       jmp  update_sparks_11a
 *      Try down instead
 update_sparks_5:
        mov  *r3,r8                     ; y
        ci   r8,map_height_pixels-5
        jgt  update_sparks_6
-       cb   @map_width(r7),@b_white
+       ai   r7,2*map_width
+       cb   *r7,r12
        jne  update_sparks_6
        li   r1,1
-       jmp  update_sparks_13
+       jmp  update_sparks_11a
 update_sparks_6:
        clr  r1
        jmp  update_sparks_12
@@ -688,39 +692,49 @@ update_sparks_7:
        inct r3
        mov  @x,r0                      ; Player x
        s    *r3,r0                     ; PLayer x - x
-;       jeq  update_sparks_12
        jlt  update_sparks_9
 *      Try right
-       cb   @1(r7),@b_white
+       inc  r7
+       cb   *r7,r12
        jne  update_sparks_8
        li   r0,1
-       jmp  update_sparks_13
+       jmp  update_sparks_11a
 *      Try left instead
 update_sparks_8:
        mov  *r3,r8                     ; x
        ci   r8,5
        jlt  update_sparks_11
-       cb   @-1(r7),@b_white
+       dect r7
+       cb   *r7,r12
        jne  update_sparks_11
        li   r0,-1
-       jmp  update_sparks_13
+       jmp  update_sparks_11a
 *      Try left
 update_sparks_9:
-       cb   @-1(r7),@b_white
+       dec  r7
+       cb   *r7,r12
        jne  update_sparks_10
        li   r0,-1
-       jmp  update_sparks_13
+       jmp  update_sparks_11a
 *      Try right instead
 update_sparks_10:
        mov  *r3,r8                     ; x
        ci   r8,map_width_pixels-5
        jgt  update_sparks_11
-       cb   @1(r7),@b_white
+       inct r7
+       cb   *r7,r12
        jne  update_sparks_11
        li   r0,1
-       jmp  update_sparks_13
+       jmp  update_sparks_11a
 update_sparks_11:
        clr  r0
+       jmp  update_sparks_12
+*      Check that spark is not moving into trail
+update_sparks_11a:
+       mov  @trail_pointer,r9
+       jeq  update_sparks_13
+       c    r7,@trail
+       jne  update_sparks_13
 *      Check if it's OK to continue moving
 update_sparks_12:
        mov  r5,r3                      ; Ptr y
@@ -820,8 +834,7 @@ upload_sprites_5:
        dec  r5
        jne  upload_sprites_5
 *      End marker
-       li   r1,>d000
-       movb r1,*r0
+       movb @b_d0,*r0
        .endproc
 tix_attr:
        data >100c,>1402,>1803,>1C0e
@@ -1485,6 +1498,8 @@ b_red:
        byte red
 b_tix:
        byte tix
+b_d0:
+       byte >d0
 
        copy "chars.a99"
        copy "sprites.a99"
@@ -1500,11 +1515,11 @@ map:
        bss  map_width*map_height
 map_backup:
        bss  map_width*map_height
-flood_fill_stack:
-       bss  flood_fill_stack_size
-trail:
-       bss  512
 tix_tail:
        bss  tix_tail_size
+trail:
+       equ  $
+flood_fill_stack:
+       bss  flood_fill_stack_size
 
        end main
