@@ -769,13 +769,28 @@ update_sparks_14:
        mov  r6,r4
        a    *r4+,*r3+                  ; y = y + dy
        a    *r4+,*r3+                  ; x = x + dx
+*      Check if player is captured
+       mov  r5,r3
+       c    *r3+,@y
+       jne  update_sparks_15
+       c    *r3+,@x
+       jne  update_sparks_15
+*      Captured
+       li   r0,spark_init
+       mov  r5,r3
+       mov  *r0+,*r3+
+       mov  *r0+,*r3+
+       mov  *r0+,*r3+
+       mov  *r0+,*r3+
 *      Loop
-       ai   r3,4
+update_sparks_15:
+       mov  r5,r3
+       ai   r3,8
        ai   r4,4
        dec  r2
-       jeq  update_sparks_15
+       jeq  update_sparks_16
        b    @update_sparks_1
-update_sparks_15:
+update_sparks_16:
        .endproc
 *// update_sparks
 
@@ -902,7 +917,7 @@ upload_sprites_4:
        li   r5,2
 upload_sprites_5:
        bl   @upload_sprite
-       c    *r3+,*r3+                  ; Skip 4 bytes
+       ai   r3,4
        dec  r5
        jne  upload_sprites_5
 *      Fuse
