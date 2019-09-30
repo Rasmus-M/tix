@@ -163,8 +163,10 @@ fuse_dx:
        equ  fuse_dy+2
 fuse_trail_pointer:
        equ  fuse_dx+2
-upload_map_pad:
+fuse_active:
        equ  fuse_trail_pointer+2
+upload_map_pad:
+       equ  fuse_active+2
 pad_max:
        equ  upload_map_pad+18
 
@@ -230,6 +232,8 @@ init_game:
        clr  @scroll_y
        clr  @name_table_flag
        clr  @trail_pointer
+       clr  @fuse_trail_pointer
+       clr  @fuse_active
        clr  @inactivity_time
        li   r0,tix_tail
        mov  r0,@tix_tail_pointer
@@ -518,6 +522,8 @@ plot_trail_1:
 *      End of trail:
        bl   @fill_closure
        clr  @trail_pointer
+       clr  @fuse_trail_pointer
+       clr  @fuse_active
 plot_trail_2:
        .endproc
 *// plot_trail
@@ -764,8 +770,8 @@ update_sparks_14:
        a    *r4+,*r3+                  ; y = y + dy
        a    *r4+,*r3+                  ; x = x + dx
 *      Loop
-       c    *r4+,*r3+                  ; +2
-       c    *r4+,*r3+                  ; +2
+       ai   r3,4
+       ai   r4,4
        dec  r2
        jeq  update_sparks_15
        b    @update_sparks_1
@@ -779,6 +785,70 @@ update_sparks_15:
 *
 update_fuse:
        .proc
+       mov  @trail_pointer,r0
+       jeq  update_fuse_6
+       abs  @fuse_active
+       jne  update_fuse_2
+       mov  @inactivity_time,r0
+       ci   r0,60
+       jlt  update_fuse_6
+*      Start/restart fuse
+       mov  @fuse_trail_pointer,r4
+       jne  update_fuse_1
+*      Start fuse
+       li   r4,trail
+       mov  *r4+,r0
+       mov  r4,@fuse_trail_pointer
+       bl   @map_coords
+       mov  r0,@fuse_x
+       mov  r1,@fuse_y
+*      Restart fuse
+update_fuse_1:
+       seto @fuse_active
+       jmp  update_fuse_4
+*      Fuse active
+update_fuse_2:
+       mov  @inactivity_time,r0
+       jeq  update_fuse_3
+       mov  @fuse_trail_pointer,r4
+       jmp  update_fuse_4
+*      Deactivate fuse
+update_fuse_3:
+       clr  @fuse_active
+       jmp  update_fuse_6
+*      Check if aligned
+update_fuse_4:
+       mov  @fuse_x,r0
+       andi r0,7
+       ci   r0,4
+       jne  update_fuse_5
+       mov  @fuse_y,r1
+       andi r1,7
+       ci   r1,4
+       jne  update_fuse_5
+*      Set new direction
+       mov  *r4+,r0
+       mov  r4,@fuse_trail_pointer
+       bl   @map_coords
+       s    @fuse_x,r0
+       sra  r0,3
+       mov  r0,@fuse_dx
+       s    @fuse_y,r1
+       sra  r1,3
+       mov  r1,@fuse_dy
+update_fuse_5:
+*      Move fuse
+       a    @fuse_dx,@fuse_x
+       a    @fuse_dy,@fuse_y
+*      Check if player is captured
+       c    @fuse_x,@x
+       jne  update_fuse_6
+       c    @fuse_y,@y
+       jne  update_fuse_6
+*      Stop fuse
+       clr  @fuse_active
+       clr  @fuse_trail_pointer
+update_fuse_6:
        .endproc
 *// update_fuse
 
@@ -835,7 +905,14 @@ upload_sprites_5:
        c    *r3+,*r3+                  ; Skip 4 bytes
        dec  r5
        jne  upload_sprites_5
+*      Fuse
+       abs  @fuse_active
+       jeq  upload_sprites_6
+       li   r3,fuse_y
+       li   r4,>3008
+       bl   @upload_sprite
 *      End marker
+upload_sprites_6:
        movb @b_d0,*r0
        .endproc
 tix_attr:
@@ -1129,7 +1206,7 @@ unmark_tix:
 
 *********************************************************************
 *
-* Map address
+* Map address from coordinates
 *
 * r0: x (pixels)
 * r1: y (pixels)
@@ -1144,6 +1221,27 @@ map_address:
        ai   r0,map
        rt
 *// map_address
+
+*********************************************************************
+*
+* Map coordinates from address
+*
+* r0: address
+*
+* On return r0 contains the x coord and r1 contains the y coord
+* of the center of the tile.
+*
+map_coords:
+       ai   r0,-map                    ; Offset
+       mov  r0,r1                      ; copy offset
+       andi r0,31                      ; x = offset mod 32
+       sla  r0,3                       ; * 8
+       ai   r0,4                       ; + 4
+       srl  r1,5                       ; y = offset / 32
+       sla  r1,3                       ; * 8
+       ai   r1,4                       , + 4
+       rt
+*// map_coords
 
 *********************************************************************
 *
