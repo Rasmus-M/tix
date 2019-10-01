@@ -68,6 +68,10 @@ font_patterns:
        equ  96
 flood_fill_stack_size:
        equ  512
+chr_zero:
+       equ  144
+chr_zero_tall:
+       equ  204
 
 **
 * Scratch pad
@@ -167,8 +171,10 @@ fuse_active:
        equ  fuse_trail_pointer+2
 upload_map_pad:
        equ  fuse_active+2
-pad_max:
+buffer:
        equ  upload_map_pad+18
+pad_max:
+       equ  buffer+8
 
 **
 * Macros
@@ -205,6 +211,7 @@ main:
        limi 0                          ; Interrupts off
        lwpi wrksp                      ; Setup workspace
        li   r10,stack                  ; Setup stack pointer
+       li   r15,vdpwd
        bl   @graphics_mode
        bl   @one_time_init
        bl   @init_game
@@ -261,6 +268,7 @@ init_game_1:
        mov  r4,*r3+
        dec  r2
        jne init_game_1
+*      Top panel
        li   r0,namet1
        li   r1,top
        li   r2,top_height/8*32
@@ -875,7 +883,6 @@ upload_sprites:
        .proc
        li   r0,spratb
        bl   @vwad
-       li   r0,vdpwd
 *      Player
        li   r3,y
        li   r4,>000d
@@ -892,13 +899,13 @@ upload_sprites_1:
        ci   r1,191
        jgt  upload_sprites_2
        swpb r1
-       movb r1,*r0
+       movb r1,*r15
        mov  *r3+,r1
        ai   r1,-8
        swpb r1
-       movb r1,*r0
-       movb *r4+,*r0
-       movb *r4+,*r0
+       movb r1,*r15
+       movb *r4+,*r15
+       movb *r4+,*r15
        jmp  upload_sprites_3
 upload_sprites_2:
        inct r3
@@ -928,7 +935,7 @@ upload_sprites_5:
        bl   @upload_sprite
 *      End marker
 upload_sprites_6:
-       movb @b_d0,*r0
+       movb @b_d0,*r15
        .endproc
 tix_attr:
        data >100c,>1402,>1803,>1C0e
@@ -949,7 +956,7 @@ upload_sprite:
        jhe  upload_sprite_2
        ai   r1,top_height-9
        swpb r1
-       movb r1,*r0
+       movb r1,*r15
        mov  r4,r2                      ; Pattern and color
        mov  *r3+,r1                    ; x
        ai   r1,-8
@@ -958,14 +965,14 @@ upload_sprite:
        ori  r2,>0080
 upload_sprite_1:
        swpb r1
-       mov  r1,*r0
+       mov  r1,*r15
        mov  @frame,r1                  ; Animation frame
        andi r1,>000c
        swpb r1                         ; Pattern
        soc  r2,r1
-       movb r1,*r0
+       movb r1,*r15
        swpb r1                         ; Color
-       mov  r1,*r0
+       mov  r1,*r15
        jmp  upload_sprite_3
 upload_sprite_2:
        inct r3
@@ -988,7 +995,6 @@ upload_map:
        li   r1,map+32
        li   r2,32*(192-top_height)/8
        clr  r3
-       li   r4,vdpwd
        mov  @scroll_y,r5
        dec  r5
        srl  r5,3
@@ -1008,8 +1014,8 @@ upload_map_1:
        sla  r3,2                       ; Shift up
        soc  *r0+,r3                    ; Combine with two bytes from row 2
        a    r5,r3                      ; Add scroll offset
-       movb r3,*r4                     ; Send one byte to VDP
-       movb *r6,*r4                    ; Send the other byte to VDP
+       movb r3,*r15                     ; Send one byte to VDP
+       movb *r6,*r15                    ; Send the other byte to VDP
        dect r2                         ; Counter
        jne  upload_map_1               ; Loop
        rt
@@ -1260,10 +1266,113 @@ map_coords:
 
 *********************************************************************
 *
+* Display double height number
+*
+* r0: Screen offset
+* r1: Number to display
+* r2: Number of digits
+*
+display_tall_decimal:
+       .proc
+       mov  r0,r5
+       mov  r2,r6
+       bl   @bin_to_dec
+       ai   r5,namet1
+       li   r7,2
+display_tall_decimal_1:
+*      1st name table buffer, 1st row
+       mov  r5,r0
+       li   r1,buffer
+       mov  r6,r2
+       li   r3,(chr_zero_tall-chr_zero)*256
+       bl   @vmbw_offs
+*      1st name table buffer, 2nd row
+       mov  r5,r0
+       ai   r0,32
+       li   r1,buffer
+       mov  r6,r2
+       li   r3,(chr_zero_tall+10-chr_zero)*256
+       bl   @vmbw_offs
+*      Next buffer
+       ai   r5,namet2-namet1
+       dec  r7
+       jne  display_tall_decimal_1
+       .endproc
+*// display_tall_decimal
+
+*********************************************************************
+*
+* Display decimal number
+*
+* r0: Screen offset
+* r1: Number to display
+* r2: Number of digits
+*
+display_decimal:
+       .proc
+       mov  r0,r5
+       mov  r2,r6
+       bl   @bin_to_dec
+*      1st name table buffer
+       mov  r5,r0
+       ai   r0,namet1
+       li   r1,buffer
+       mov  r6,r2
+       bl   @vmbw
+*      2nd name table buffer
+       mov  r5,r0
+       ai   r0,namet2
+       li   r1,buffer
+       mov  r6,r2
+       bl   @vmbw
+       .endproc
+*// display_decimal
+
+*********************************************************************
+*
+* Convert binary number to decimal
+*
+* r1: Number to display
+* r2: Number of digits
+*
+* On return @buffer contains the number
+*
+bin_to_dec:
+       li   r4,buffer
+       li   r3,5
+       s    r2,r3
+       sla  r3,1
+       ai   r3,d10000
+       dec  r2
+bin_to_dec_1:
+       clr  r0
+       div  *r3+,r0
+       ai   r0,chr_zero
+       swpb r0
+       movb r0,*r4+
+       dec  r2
+       jne  bin_to_dec_1
+       ai   r1,chr_zero
+       swpb r1
+       movb r1,*r4+
+       rt
+d10000:
+       data 10000
+d1000:
+       data 1000
+d100:
+       data 100
+d10:
+       data 10
+*// bin_to_dec
+
+*********************************************************************
+*
 * One time initializations
 *
 one_time_init:
        .proc
+*      Patterns
        li   r0,ptrntb
        li   r1,chars
        li   r2,8*8*16
@@ -1276,10 +1385,12 @@ one_time_init:
        li   r1,chars
        li   r2,8*8*16
        bl   @vmbw
+*      Colors
        li   r0,colrtb
        li   r1,colors
        li   r2,8*8*16
        bl   @vmbw
+*      Font
        li   r0,ptrntb+>400
        li   r1,PAT128
        li   r2,font_patterns*8
@@ -1292,10 +1403,12 @@ one_time_init:
        li   r1,PAT128
        li   r2,font_patterns*8
        bl   @vmbw
+*      Font colors
        li   r0,colrtb+>400
        li   r1,COL128
        li   r2,font_patterns*8
        bl   @vmbw
+*      Sprite patterns
        li   r0,sprptb
        li   r1,SPR0
        li   r2,sprite_patters*32
@@ -1407,13 +1520,34 @@ vmbw:
        movb  @r0lb,@vdpwa              ; Send low byte of VDP RAM write address
        ori  r0,>4000                   ; Set read/write bits 14 and 15 to write (01)
        movb r0,@vdpwa                  ; Send high byte of VDP RAM write address
-       li   r0,vdpwd
 vmbw_1:
-       movb *r1+,*r0                   ; Write byte to VDP RAM
+       movb *r1+,*r15                  ; Write byte to VDP RAM
        dec  r2
        jne  vmbw_1
        rt
 *// vmbw
+
+*********************************************************************
+*
+* VDP multiple Byte Write with offset
+*
+* R0: Write address in VDP RAM
+* R1: Starting read address in CPU RAM
+* R2: Number of bytes to send
+* R3: Offset to add to bytes
+*
+vmbw_offs:
+       movb  @r0lb,@vdpwa              ; Send low byte of VDP RAM write address
+       ori  r0,>4000                   ; Set read/write bits 14 and 15 to write (01)
+       movb r0,@vdpwa                  ; Send high byte of VDP RAM write address
+vmbw_offs_1:
+       movb *r1+,r4
+       ab   r3,r4
+       movb r4,*r15                    ; Write byte to VDP RAM
+       dec  r2
+       jne  vmbw_offs_1
+       rt
+*// vmbw_offs
 
 *********************************************************************
 *
@@ -1427,9 +1561,8 @@ vsmw:
        movb  @r0lb,@vdpwa              ; Send low byte of VDP RAM write address
        ori  r0,>4000                   ; Set read/write bits 14 and 15 to write (01)
        movb r0,@vdpwa                  ; Send high byte of VDP RAM write address
-       li   r0,vdpwd
 vsmw_1:
-       movb r1,*r0                     ; Write byte to VDP RAM
+       movb r1,*r15                    ; Write byte to VDP RAM
        dec  r2                         ; Byte counter
        jne  vsmw_1
        rt
