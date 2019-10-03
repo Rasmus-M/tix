@@ -97,8 +97,12 @@ padvar equ  stack+>20                  ; Start of pad variables
 *
 frame:
        equ  padvar+2
-y:
+score:
        equ  frame+2
+old_score:
+       equ  score+2
+y:
+       equ  old_score+2
 x:
        equ  y+2
 dy:
@@ -111,8 +115,10 @@ old_dx:
        equ  old_dy+2
 fire:
        equ  old_dx+2
-char_aligned:
+slow:
        equ  fire+2
+char_aligned:
+       equ  slow+2
 trail_pointer:
        equ  char_aligned+2
 inactivity_time:
@@ -226,6 +232,7 @@ loop:
        bl   @update_fuse
        bl   @upload_sprites
        bl   @upload_map
+       bl   @display_score
        inc  @frame
        jmp  loop
 
@@ -236,6 +243,8 @@ loop:
 init_game:
        .proc
        clr  @frame
+       clr  @score
+       seto @old_score
        clr  @scroll_y
        clr  @name_table_flag
        clr  @trail_pointer
@@ -379,6 +388,7 @@ user_input:
 *      Fire
        jeq  user_input_1
        seto @fire
+       clr  @slow
 user_input_1:
 *      Left
        tb   1
@@ -514,6 +524,7 @@ plot_trail:
        mov  @trail_pointer,r1
        jne  plot_trail_0
        li   r1,trail                   ; New trail
+       seto @slow
 plot_trail_0:
        mov  r0,*r1+
        mov  r1,@trail_pointer
@@ -1029,7 +1040,7 @@ upload_map_2
 fill_closure:
        .proc
        bl   @save_map
-       abs  @fire
+       abs  @slow
        jne  fill_closure_1
        li   r9,blue*256
        jmp  fill_closure_2
@@ -1069,6 +1080,11 @@ fill_closure_2:
        li   r3,white*256
        bl   @flood_fill
 fill_closure_3:
+       abs  @slow
+       jeq  fill_closure_4
+       sla  r4,1
+fill_closure_4:
+       a    r4,@score
        .endproc
 *// fill_closure
 
@@ -1263,6 +1279,23 @@ map_coords:
        ai   r1,4                       , + 4
        rt
 *// map_coords
+
+*********************************************************************
+*
+* Display score
+*
+display_score:
+       .proc
+       c    @score,@old_score
+       jeq  display_score_1
+       li   r0,58
+       mov  @score,r1
+       li   r2,5
+       bl   @display_tall_decimal
+       mov  @score,@old_score
+display_score_1:
+       .endproc
+*// display_score
 
 *********************************************************************
 *
