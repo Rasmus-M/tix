@@ -57,7 +57,7 @@ tix:
 tix_tail_size:
        equ  128
 top_height:
-       equ  32
+       equ  24
 middle_y:
        equ  (192-top_height)/2
 sprite_patters:
@@ -1288,7 +1288,7 @@ display_score:
        .proc
        c    @score,@old_score
        jeq  display_score_1
-       li   r0,58
+       li   r0,26
        mov  @score,r1
        li   r2,5
        bl   @display_tall_decimal
