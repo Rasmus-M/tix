@@ -443,67 +443,96 @@ move_player:
        .proc
 *      Check where we're going
        abs  @char_aligned
-       jeq  move_player_2
+       jeq  move_player_7
+*      Check one char away
        mov  @dx,r0
-       sla  r0,3
-       a    @x,r0
        mov  @dy,r1
+       abs  @slow
+       jeq  move_player_1
+       sla  r0,3
        sla  r1,3
+       jmp  move_player_2
+move_player_1:
+       sla  r0,2
+       sla  r1,2
+move_player_2:
+       mov  r0,r2
+       mov  r1,r3
+       a    @x,r0
        a    @y,r1
        bl   @map_address
        movb *r0,r1
-       jeq  move_player_2
+       jeq  move_player_4
        cb   r1,@b_white
-       jne  move_player_1
+       jne  move_player_6
        mov  @trail_pointer,r1
-       jeq  move_player_2
-move_player_0:
+       jeq  move_player_7
+move_player_3:
        dect r1
        c    r0,*r1
-       jeq  move_player_1
+       jeq  move_player_6
        ci   r1,trail
-       jne  move_player_0
-       jmp  move_player_2
-move_player_1:
+       jne  move_player_3
+*      Check two chars away
+move_player_4:
+       mov  r2,r0
+       sla  r0,1
+       a    @x,r0
+       mov  r3,r1
+       sla  r1,1
+       a    @y,r1
+       bl   @map_address
+       cb   *r0,@b_white
+       jne  move_player_7
+       mov  @trail_pointer,r1
+       jeq  move_player_7
+move_player_5:
+       dect r1
+       c    r0,*r1
+       jeq  move_player_6
+       ci   r1,trail
+       jne  move_player_5
+       jmp  move_player_7
+move_player_6:
        clr  @dx
        clr  @dy
-       jmp  move_player_8
+       jmp  move_player_13
 *      Move x
-move_player_2:
+move_player_7:
        mov  @x,r0
        a    @dx,r0
        ci   r0,4
-       jlt  move_player_3
+       jlt  move_player_8
        ci   r0,256-4
-       jgt  move_player_3
+       jgt  move_player_8
        mov  r0,@x
 *      Move y
-move_player_3:
+move_player_8:
        mov  @y,r0
        a    @dy,r0
        ci   r0,4
-       jlt  move_player_4
+       jlt  move_player_9
        ci   r0,map_height_pixels-4
-       jgt  move_player_4
+       jgt  move_player_9
        mov  r0,@y
 *      Scroll
-move_player_4:
+move_player_9:
        mov  @y,r0
        ci   r0,middle_y
-       jhe  move_player_5
+       jhe  move_player_10
        clr  r0
-       jmp  move_player_7
-move_player_5:
+       jmp  move_player_12
+move_player_10:
        ci   r0,map_height_pixels-middle_y
-       jlt  move_player_6
+       jlt  move_player_11
        li   r0,map_height_pixels-(192-top_height)
-       jmp  move_player_7
-move_player_6:
+       jmp  move_player_12
+move_player_11:
        mov  @y,r0
        ai   r0,-middle_y
-move_player_7:
+move_player_12:
        mov  r0,@scroll_y
-move_player_8:
+move_player_13:
        .endproc
 *// move_player
 
@@ -1788,12 +1817,17 @@ b_d0:
        copy "top.a99"
 
 * One extra map row to support scrolling
-       DATA >0101,>0101,>0101,>0101    ;
-       DATA >0101,>0101,>0101,>0101    ;
-       DATA >0101,>0101,>0101,>0101    ;
-       DATA >0101,>0101,>0101,>0101    ;
+       DATA >0303,>0303,>0303,>0303    ;
+       DATA >0303,>0303,>0303,>0303    ;
+       DATA >0303,>0303,>0303,>0303    ;
+       DATA >0303,>0303,>0303,>0303    ;
 map:
        bss  map_width*map_height
+* One extra map row to support scrolling
+       DATA >0303,>0303,>0303,>0303    ;
+       DATA >0303,>0303,>0303,>0303    ;
+       DATA >0303,>0303,>0303,>0303    ;
+       DATA >0303,>0303,>0303,>0303    ;
 map_backup:
        bss  map_width*map_height
 tix_tail:
