@@ -705,10 +705,11 @@ update_sparks_2:
        clr  r0                         ; dx = 0
        mov  @y,r1                      ; Player y
        s    *r3,r1                     ; Player y - y
+       jeq  update_sparks_6
        jlt  update_sparks_4
 *      Try down
        ai   r7,map_width
-       cb   *r7,r12
+       cb   *r7,r12                    ; Check if white
        jne  update_sparks_3
        li   r1,1
        jmp  update_sparks_11a
@@ -716,16 +717,16 @@ update_sparks_2:
 update_sparks_3:
        mov  *r3,r8                     ; y
        ci   r8,5
-       jlt  update_sparks_6
+       jlt  update_sparks_6            ; Not if y < 5
        ai   r7,-2*map_width
-       cb   *r7,r12
+       cb   *r7,r12                    ; Check if white
        jne  update_sparks_6
        li   r1,-1
        jmp  update_sparks_11a
 *      Try up
 update_sparks_4:
        ai   r7,-map_width
-       cb   *r7,r12
+       cb   *r7,r12                    ; Check if white
        jne  update_sparks_5
        li   r1,-1
        jmp  update_sparks_11a
@@ -733,9 +734,9 @@ update_sparks_4:
 update_sparks_5:
        mov  *r3,r8                     ; y
        ci   r8,map_height_pixels-5
-       jgt  update_sparks_6
+       jgt  update_sparks_6            ; Not if y > 315
        ai   r7,2*map_width
-       cb   *r7,r12
+       cb   *r7,r12                    ; Check if white
        jne  update_sparks_6
        li   r1,1
        jmp  update_sparks_11a
@@ -748,10 +749,11 @@ update_sparks_7:
        inct r3
        mov  @x,r0                      ; Player x
        s    *r3,r0                     ; PLayer x - x
+       jeq  update_sparks_11
        jlt  update_sparks_9
 *      Try right
        inc  r7
-       cb   *r7,r12
+       cb   *r7,r12                    ; Check if white
        jne  update_sparks_8
        li   r0,1
        jmp  update_sparks_11a
@@ -759,16 +761,16 @@ update_sparks_7:
 update_sparks_8:
        mov  *r3,r8                     ; x
        ci   r8,5
-       jlt  update_sparks_11
+       jlt  update_sparks_11           ; Not if x < 5
        dect r7
-       cb   *r7,r12
+       cb   *r7,r12                    ; Check if white
        jne  update_sparks_11
        li   r0,-1
        jmp  update_sparks_11a
 *      Try left
 update_sparks_9:
        dec  r7
-       cb   *r7,r12
+       cb   *r7,r12                    ; Check if white
        jne  update_sparks_10
        li   r0,-1
        jmp  update_sparks_11a
@@ -776,9 +778,9 @@ update_sparks_9:
 update_sparks_10:
        mov  *r3,r8                     ; x
        ci   r8,map_width_pixels-5
-       jgt  update_sparks_11
+       jgt  update_sparks_11           ; Not if x > 251
        inct r7
-       cb   *r7,r12
+       cb   *r7,r12                    ; Check if white
        jne  update_sparks_11
        li   r0,1
        jmp  update_sparks_11a
