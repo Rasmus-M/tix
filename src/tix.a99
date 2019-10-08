@@ -105,16 +105,16 @@ y:
        equ  old_score+2
 x:
        equ  y+2
-dy:
+vy:
        equ  x+2
+vx:
+       equ  vy+2
+dy:
+       equ  vx+2
 dx:
        equ  dy+2
-old_dy:
-       equ  dx+2
-old_dx:
-       equ  old_dy+2
 fire:
-       equ  old_dx+2
+       equ  dx+2
 slow:
        equ  fire+2
 char_aligned:
@@ -413,15 +413,15 @@ user_input_4:
        jeq  user_input_5
        li   r3,-1
 user_input_5:
+       mov  r2,@dx
+       mov  r3,@dy
        abs  @fire
        jeq  user_input_6
        sla  r2,1
        sla  r3,1
 user_input_6:
-       mov  @dx,@old_dx
-       mov  @dy,@old_dy
-       mov  r2,@dx
-       mov  r3,@dy
+       mov  r2,@vx
+       mov  r3,@vy
 user_input_7:
        mov  r2,r0
        jne  user_input_8
@@ -446,19 +446,12 @@ move_player:
        jeq  move_player_7
 *      Check one char away
        mov  @dx,r0
-       mov  @dy,r1
-       abs  @slow
-       jeq  move_player_1
        sla  r0,3
-       sla  r1,3
-       jmp  move_player_2
-move_player_1:
-       sla  r0,2
-       sla  r1,2
-move_player_2:
        mov  r0,r2
-       mov  r1,r3
        a    @x,r0
+       mov  @dy,r1
+       sla  r1,3
+       mov  r1,r3
        a    @y,r1
        bl   @map_address
        movb *r0,r1
@@ -494,13 +487,13 @@ move_player_5:
        jne  move_player_5
        jmp  move_player_7
 move_player_6:
-       clr  @dx
-       clr  @dy
+       clr  @vx
+       clr  @vy
        jmp  move_player_13
 *      Move x
 move_player_7:
        mov  @x,r0
-       a    @dx,r0
+       a    @vx,r0
        ci   r0,4
        jlt  move_player_8
        ci   r0,256-4
@@ -509,7 +502,7 @@ move_player_7:
 *      Move y
 move_player_8:
        mov  @y,r0
-       a    @dy,r0
+       a    @vy,r0
        ci   r0,4
        jlt  move_player_9
        ci   r0,map_height_pixels-4
@@ -1081,8 +1074,8 @@ fill_closure_2:
 *      Fill to the right
        mov  @x,r0
        mov  @y,r1
-       mov  @old_dx,r2
-       mov  @old_dy,r3
+       mov  @dx,r2
+       mov  @dy,r3
        sla  r2,3
        sla  r3,3
        s    r2,r0                      ; Backtrack one tile
@@ -1099,9 +1092,9 @@ fill_closure_2:
        bl   @restore_map
        mov  @x,r0
        mov  @y,r1
-       mov  @old_dx,r2
+       mov  @dx,r2
        sla  r2,3
-       mov  @old_dy,r3
+       mov  @dy,r3
        sla  r3,3
        s    r2,r0                      ; Backtrack one tile
        s    r3,r1
