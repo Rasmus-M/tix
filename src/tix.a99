@@ -44,6 +44,10 @@ map_height:
        equ  40
 map_height_pixels:
        equ  map_height*8
+map_size:
+       equ map_width*map_height
+inner_map_size:
+       equ (map_width-2)*(map_height-2)
 black:
        equ  0
 white:
@@ -105,8 +109,10 @@ area:
        equ  old_score+2
 old_area:
        equ  area+2
-y:
+area_required:
        equ  old_area+2
+y:
+       equ  area_required+2
 x:
        equ  y+2
 vy:
@@ -228,8 +234,11 @@ main:
        li   r15,vdpwd
        bl   @graphics_mode
        bl   @one_time_init
+new_game:
        bl   @init_game
-loop:
+new_level:
+       bl   @init_level
+game_loop:
        bl   @vsync
        bl   @update_vdp_regs
        bl   @user_input
@@ -242,8 +251,11 @@ loop:
        bl   @upload_map
        bl   @display_score
        bl   @display_area
+       c    @area,@area_required
+       jhe  new_level
        inc  @frame
-       jmp  loop
+       jmp  game_loop
+*// main
 
 *********************************************************************
 *
@@ -254,23 +266,42 @@ init_game:
        clr  @frame
        clr  @score
        seto @old_score
+*      Top panel
+       li   r0,namet1
+       li   r1,top
+       li   r2,top_height/8*32
+       bl   @vmbw
+       li   r0,namet2
+       li   r1,top
+       li   r2,top_height/8*32
+       bl   @vmbw
+       .endproc
+*// init_game
+
+*********************************************************************
+*
+* Init level
+*
+init_level:
+       .proc
        clr  @area
        seto @old_area
+       li   r0,3*inner_map_size/4
+       mov  r0,@area_required
        clr  @scroll_y
        clr  @name_table_flag
        clr  @trail_pointer
        clr  @fuse_trail_pointer
        clr  @fuse_active
        clr  @inactivity_time
-       li   r0,tix_tail
-       mov  r0,@tix_tail_pointer
-       bl   @init_map
 *      Player
        li   r0,132
        mov  r0,@x
        li   r0,4
        mov  r0,@y
 *      Tix
+       li   r0,tix_tail
+       mov  r0,@tix_tail_pointer
        clr  @tix_ax
        clr  @tix_ay
        li   r0,1*256
@@ -283,35 +314,28 @@ init_game:
        mov  r4,@tix_x
        li   r5,132*16
        mov  r5,@tix_y
-init_game_1:
-       mov  r5,*r3+
-       mov  r4,*r3+
-       dec  r2
-       jne init_game_1
-*      Top panel
-       li   r0,namet1
-       li   r1,top
-       li   r2,top_height/8*32
-       bl   @vmbw
-       li   r0,namet2
-       li   r1,top
-       li   r2,top_height/8*32
-       bl   @vmbw
 *      Sparks
        li   r0,spark_init
        li   r1,spark_1_y
        li   r2,16
        bl   @copy
+*      Screen
+       bl   @init_map
+       bl   @display_area_required
        .endproc
 spark_init:
        data 76,4,-1,0,76,252,1,0
-*// init_game
+*// init_level
 
 *********************************************************************
 *
 * Init map
 *
 init_map:
+       .proc
+       li   r0,map
+       li   r2,map_size
+       bl   @clear
        li   r0,white*256
 *      Top
        li   r1,map
@@ -343,7 +367,7 @@ init_map_4:
        ai   r1,map_width
        dec  r2
        jne  init_map_4
-       rt
+       .endproc
 *// init_map
 
 *********************************************************************
@@ -1140,7 +1164,7 @@ save_map:
        .proc
        li   r0,map
        li   r1,map_backup
-       li   r2,map_width*map_height
+       li   r2,map_size
        bl   @copy
        .endproc
 *// save_map
@@ -1153,7 +1177,7 @@ restore_map:
        .proc
        li   r0,map_backup
        li   r1,map
-       li   r2,map_width*map_height
+       li   r2,map_size
        bl   @copy
        .endproc
 *// restore_map
@@ -1351,7 +1375,7 @@ display_area:
        jeq  display_area_1
        mov  @area,r0
        mpy  @d10,r0                    ; r1=area*10, r0=0
-       li   r2,(map_width-2)*(map_height-2)/10
+       li   r2,inner_map_size/10
        div  r2,r0                      ; area*10/(total_area/10)=100*area/total_area
        mov  r0,r1
        li   r0,45
@@ -1361,6 +1385,23 @@ display_area:
 display_area_1:
        .endproc
 *// display_area
+
+*********************************************************************
+*
+* Display area required
+*
+display_area_required:
+       .proc
+       mov  @area_required,r0
+       mpy  @d10,r0                    ; r1=area*10, r0=0
+       li   r2,inner_map_size/10
+       div  r2,r0                      ; area*10/(total_area/10)=100*area/total_area
+       mov  r0,r1
+       li   r0,49
+       li   r2,2
+       bl   @display_decimal
+       .endproc
+*// display_area_required
 
 *********************************************************************
 *
@@ -1858,14 +1899,14 @@ b_d0:
        DATA >0303,>0303,>0303,>0303    ;
        DATA >0303,>0303,>0303,>0303    ;
 map:
-       bss  map_width*map_height
+       bss  map_size
 * One extra map row to support scrolling
        DATA >0303,>0303,>0303,>0303    ;
        DATA >0303,>0303,>0303,>0303    ;
        DATA >0303,>0303,>0303,>0303    ;
        DATA >0303,>0303,>0303,>0303    ;
 map_backup:
-       bss  map_width*map_height
+       bss  map_size
 tix_tail:
        bss  tix_tail_size
 trail:
