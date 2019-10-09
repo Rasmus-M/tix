@@ -101,8 +101,12 @@ score:
        equ  frame+2
 old_score:
        equ  score+2
-y:
+area:
        equ  old_score+2
+old_area:
+       equ  area+2
+y:
+       equ  old_area+2
 x:
        equ  y+2
 vy:
@@ -245,6 +249,8 @@ init_game:
        clr  @frame
        clr  @score
        seto @old_score
+       clr  @area
+       seto @old_area
        clr  @scroll_y
        clr  @name_table_flag
        clr  @trail_pointer
@@ -536,7 +542,7 @@ move_player_13:
 plot_trail:
        .proc
        abs  @char_aligned
-       jeq  plot_trail_2
+       jeq  plot_trail_3
        mov  @x,r0
        mov  @y,r1
        bl   @map_address
@@ -552,20 +558,26 @@ plot_trail_0:
        mov  r1,@trail_pointer
        li   r2,>0100
        movb r2,*r0                     ; Plot
-       jmp  plot_trail_2
+       jmp  plot_trail_3
 *      Not empty position
 plot_trail_1:
        mov  @trail_pointer,r1
-       jeq  plot_trail_2               ; No trail
+       jeq  plot_trail_3               ; No trail
        dect r1
        c    r0,*r1
-       jeq  plot_trail_2
+       jeq  plot_trail_3
 *      End of trail:
-       bl   @fill_closure
+       bl   @fill_area
+       a    r0,@area
+       abs  @slow
+       jeq  plot_trail_2
+       sla  r0,1
+plot_trail_2:
+       a    r0,@score
        clr  @trail_pointer
        clr  @fuse_trail_pointer
        clr  @fuse_active
-plot_trail_2:
+plot_trail_3:
        .endproc
 *// plot_trail
 
@@ -1059,18 +1071,20 @@ upload_map_2
 
 *********************************************************************
 *
-* Fill closure
+* Fill area
 *
-fill_closure:
+* On return r0 contains the number of tiles filled, incuding outline
+*
+fill_area:
        .proc
        bl   @save_map
        abs  @slow
-       jne  fill_closure_1
+       jne  fill_area_1
        li   r9,blue*256
-       jmp  fill_closure_2
-fill_closure_1:
+       jmp  fill_area_2
+fill_area_1:
        li   r9,red*256
-fill_closure_2:
+fill_area_2:
 *      Fill to the right
        mov  @x,r0
        mov  @y,r1
@@ -1086,8 +1100,8 @@ fill_closure_2:
        li   r3,white*256
        bl   @flood_fill
        mov  r4,r4
-       jgt  fill_closure_3
-       jeq  fill_closure_3
+       jgt  fill_area_3
+       jeq  fill_area_3
 *      Fill to the left
        bl   @restore_map
        mov  @x,r0
@@ -1103,14 +1117,13 @@ fill_closure_2:
        mov  r9,r2
        li   r3,white*256
        bl   @flood_fill
-fill_closure_3:
-       abs  @slow
-       jeq  fill_closure_4
-       sla  r4,1
-fill_closure_4:
-       a    r4,@score
+fill_area_3:
+       mov  @trail_pointer,r0
+       ai   r0,-trail
+       srl  r0,1
+       a    r4,r0
        .endproc
-*// fill_closure
+*// fill_area
 
 *********************************************************************
 *
