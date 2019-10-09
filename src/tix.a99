@@ -117,8 +117,12 @@ dy:
        equ  vx+2
 dx:
        equ  dy+2
-fire:
+dy_old:
        equ  dx+2
+dx_old:
+       equ  dy_old+2
+fire:
+       equ  dx_old+2
 slow:
        equ  fire+2
 char_aligned:
@@ -377,17 +381,17 @@ update_vdp_regs:
 *
 user_input:
        .proc
-       clr  @fire
        clr  @char_aligned
        mov  @x,r0
        andi r0,7
        ci   r0,4
-       jne  user_input_7
+       jne  user_input_9
        mov  @y,r1
        andi r1,7
        ci   r1,4
-       jne  user_input_7
+       jne  user_input_9
        seto @char_aligned
+       clr  @fire
        clr  r2
        clr  r3
        li   r0,JOY_FI
@@ -422,22 +426,24 @@ user_input_4:
 user_input_5:
        mov  r2,@dx
        mov  r3,@dy
+       mov  r2,r0
+       jne  user_input_6
+       mov  r3,r0
+       jne  user_input_6
+       inc  @inactivity_time
+       jmp  user_input_7
+user_input_6:
+       mov  r2,@dx_old
+       mov  r3,@dy_old
+       clr  @inactivity_time
+user_input_7:
        abs  @fire
-       jeq  user_input_6
+       jeq  user_input_8
        sla  r2,1
        sla  r3,1
-user_input_6:
+user_input_8:
        mov  r2,@vx
        mov  r3,@vy
-user_input_7:
-       mov  r2,r0
-       jne  user_input_8
-       mov  r3,r0
-       jne  user_input_8
-       inc  @inactivity_time
-       jmp  user_input_9
-user_input_8:
-       clr  @inactivity_time
 user_input_9:
        .endproc
 *// user_input
@@ -1089,8 +1095,8 @@ fill_area_2:
 *      Fill to the right
        mov  @x,r0
        mov  @y,r1
-       mov  @dx,r2
-       mov  @dy,r3
+       mov  @dx_old,r2
+       mov  @dy_old,r3
        sla  r2,3
        sla  r3,3
        s    r2,r0                      ; Backtrack one tile
@@ -1107,9 +1113,9 @@ fill_area_2:
        bl   @restore_map
        mov  @x,r0
        mov  @y,r1
-       mov  @dx,r2
+       mov  @dx_old,r2
        sla  r2,3
-       mov  @dy,r3
+       mov  @dy_old,r3
        sla  r3,3
        s    r2,r0                      ; Backtrack one tile
        s    r3,r1
@@ -1120,7 +1126,7 @@ fill_area_2:
        bl   @flood_fill
 fill_area_3:
        mov  @trail_pointer,r0
-       ai   r0,-trail-1
+       ai   r0,-trail
        srl  r0,1
        a    r4,r0
        .endproc
