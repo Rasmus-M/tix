@@ -237,6 +237,7 @@ loop:
        bl   @upload_sprites
        bl   @upload_map
        bl   @display_score
+       bl   @display_area
        inc  @frame
        jmp  loop
 
@@ -1119,7 +1120,7 @@ fill_area_2:
        bl   @flood_fill
 fill_area_3:
        mov  @trail_pointer,r0
-       ai   r0,-trail
+       ai   r0,-trail-1
        srl  r0,1
        a    r4,r0
        .endproc
@@ -1333,6 +1334,27 @@ display_score:
 display_score_1:
        .endproc
 *// display_score
+
+*********************************************************************
+*
+* Display area
+*
+display_area:
+       .proc
+       c    @area,@old_area
+       jeq  display_area_1
+       mov  @area,r0
+       mpy  @d10,r0                    ; r1=area*10, r0=0
+       li   r2,(map_width-2)*(map_height-2)/10
+       div  r2,r0                      ; area*10/(total_area/10)=100*area/total_area
+       mov  r0,r1
+       li   r0,45
+       li   r2,2
+       bl   @display_decimal
+       mov  @area,@old_area
+display_area_1:
+       .endproc
+*// display_area
 
 *********************************************************************
 *
