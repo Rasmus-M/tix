@@ -101,8 +101,10 @@ padvar equ  stack+>20                  ; Start of pad variables
 *
 frame:
        equ  padvar+2
-score:
+status:
        equ  frame+2
+score:
+       equ  status+2
 old_score:
        equ  score+2
 area:
@@ -255,10 +257,19 @@ game_loop:
        bl   @upload_map
        bl   @display_score
        bl   @display_area
-       c    @area,@area_required
-       jhe  new_level
        inc  @frame
+       mov  @status,r0
+       jgt  level_completed
+       jlt  died
        jmp  game_loop
+level_completed:
+       li   r2,60
+       bl   @wait
+       jmp  new_level
+died:
+       li   r2,60
+       bl   @wait
+       jmp  new_game
 *// main
 
 *********************************************************************
@@ -288,6 +299,7 @@ init_game:
 *
 init_level:
        .proc
+       clr  @status
        clr  @area
        seto @old_area
        li   r0,3*inner_map_size/4
@@ -581,7 +593,7 @@ move_player_12:
 plot_trail:
        .proc
        abs  @char_aligned
-       jeq  plot_trail_3
+       jeq  plot_trail_4
        mov  @x,r0
        mov  @y,r1
        bl   @map_address
@@ -597,26 +609,30 @@ plot_trail_0:
        mov  r1,@trail_pointer
        li   r2,>0100
        movb r2,*r0                     ; Plot
-       jmp  plot_trail_3
+       jmp  plot_trail_4
 *      Not empty position
 plot_trail_1:
        mov  @trail_pointer,r1
-       jeq  plot_trail_3               ; No trail
+       jeq  plot_trail_4               ; No trail
        dect r1
        c    r0,*r1
-       jeq  plot_trail_3
+       jeq  plot_trail_4
 *      End of trail:
        bl   @fill_area
        a    r0,@area
-       abs  @slow
-       jeq  plot_trail_2
-       sla  r0,1
+       c    @area,@area_required
+       jlt  plot_trail_2
+       inc  @status
 plot_trail_2:
+       abs  @slow
+       jeq  plot_trail_3
+       sla  r0,1
+plot_trail_3:
        a    r0,@score
        clr  @trail_pointer
        clr  @fuse_trail_pointer
        clr  @fuse_active
-plot_trail_3:
+plot_trail_4:
        .endproc
 *// plot_trail
 
@@ -876,6 +892,7 @@ update_sparks_14:
        mov  *r0+,*r3+
        mov  *r0+,*r3+
        mov  *r0+,*r3+
+       dec  @status
 *      Loop
 update_sparks_15:
        mov  r5,r3
@@ -955,6 +972,7 @@ update_fuse_5:
        c    @fuse_y,@y
        jne  update_fuse_6
 *      Stop fuse
+       dec  @status
        clr  @fuse_active
        clr  @fuse_trail_pointer
 update_fuse_6:
@@ -1878,6 +1896,21 @@ clear:
        jne  clear
        rt
 *// clear
+
+*********************************************************************
+*
+* Wait
+*
+* r2: number of frames
+*
+wait:
+       .proc
+wait_1:
+       bl   @vsync
+       dec  r2
+       jne  wait_1
+       .endproc
+*// wait
 
 *********************************************************************
 *
