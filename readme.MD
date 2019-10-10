@@ -19,8 +19,12 @@ On Windows, run make.bat to build the cartridge and disk versions.
 
 There are 2 options for running the game:
 
-* With 16K cartridge, FinalGROM99, or emulators: Burn and run tix-8.bin (non-inverted).
+* With 16K cartridge, FlashROM99, FinalGROM99, or emulators: Burn and run tix8.bin (non-inverted).
 * With 32K expansion and disk system: Run E/A#5 DSK1.TIX.
+
+## Playing the game
+
+You can play the game using a joystick only. Fire to move faster.
 
 ## License
 
