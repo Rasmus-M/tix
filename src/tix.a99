@@ -1968,11 +1968,6 @@ b_d0:
        DATA >0303,>0303,>0303,>0303    ;
 map:
        bss  map_size
-* One extra map row to support scrolling
-       DATA >0303,>0303,>0303,>0303    ;
-       DATA >0303,>0303,>0303,>0303    ;
-       DATA >0303,>0303,>0303,>0303    ;
-       DATA >0303,>0303,>0303,>0303    ;
 map_backup:
        bss  map_size
 tix_tail:
