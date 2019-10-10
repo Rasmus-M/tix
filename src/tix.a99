@@ -699,7 +699,7 @@ move_tix_0:
        jeq  move_tix_1
 *      Collision vertical
        neg  @tix_dx
-       jmp  move_tix_3
+       jmp  move_tix_1a
 move_tix_1:
        mov  @tix_x,r0
        sra  r0,4                       ; Unmoved x
@@ -709,6 +709,20 @@ move_tix_1:
        jeq  move_tix_2
 *      Collision horizontal
        neg  @tix_dy
+move_tix_1a:
+*      Check if hit trail
+       mov  @trail_pointer,r1
+       jeq  move_tix_3
+move_tix_1b:
+       dect r1
+       c    r0,*r1
+       jeq  move_tix_1c
+       ci   r1,trail
+       jne  move_tix_1b
+       jmp  move_tix_3
+move_tix_1c:
+*      Hit trail
+       dec  @status
        jmp  move_tix_3
 *      Move
 move_tix_2:
@@ -745,12 +759,15 @@ update_sparks_1:
        mov  *r3+,r1                    ; y
        andi r1,7
        ci   r1,4
-       jne  update_sparks_14
+       jne  update_sparks_1a
        mov  *r3+,r0                    ; x
        andi r0,7
        ci   r0,4
-       jne  update_sparks_14
+       jeq  update_sparks_1b
+update_sparks_1a:
+       b    @update_sparks_14
 *      Turn towards player
+update_sparks_1b:
        li   r12,white*256
 update_sparks_2:
        mov  r5,r3                      ; Ptr y
@@ -765,9 +782,11 @@ update_sparks_2:
        clr  r0                         ; dx = 0
        mov  @y,r1                      ; Player y
        s    *r3,r1                     ; Player y - y
-       jeq  update_sparks_6
        jlt  update_sparks_4
 *      Try down
+       mov  *r3,r8                     ; y
+       ci   r8,map_height_pixels-5
+       jgt  update_sparks_6            ; Not if y > 315
        ai   r7,map_width
        cb   *r7,r12                    ; Check if white
        jne  update_sparks_3
@@ -785,6 +804,9 @@ update_sparks_3:
        jmp  update_sparks_11a
 *      Try up
 update_sparks_4:
+       mov  *r3,r8                     ; y
+       ci   r8,5
+       jlt  update_sparks_6            ; Not if y < 5
        ai   r7,-map_width
        cb   *r7,r12                    ; Check if white
        jne  update_sparks_5
@@ -809,9 +831,11 @@ update_sparks_7:
        inct r3
        mov  @x,r0                      ; Player x
        s    *r3,r0                     ; PLayer x - x
-       jeq  update_sparks_11
        jlt  update_sparks_9
 *      Try right
+       mov  *r3,r8                     ; x
+       ci   r8,map_width_pixels-5
+       jgt  update_sparks_11           ; Not if x > 251
        inc  r7
        cb   *r7,r12                    ; Check if white
        jne  update_sparks_8
@@ -829,6 +853,9 @@ update_sparks_8:
        jmp  update_sparks_11a
 *      Try left
 update_sparks_9:
+       mov  *r3,r8                     ; x
+       ci   r8,5
+       jlt  update_sparks_11           ; Not if x < 5
        dec  r7
        cb   *r7,r12                    ; Check if white
        jne  update_sparks_10
