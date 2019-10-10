@@ -123,8 +123,12 @@ dy:
        equ  vx+2
 dx:
        equ  dy+2
-dy_old:
+y_old:
        equ  dx+2
+x_old:
+       equ  y_old+2
+dy_old:
+       equ  x_old+2
 dx_old:
        equ  dy_old+2
 fire:
@@ -453,13 +457,10 @@ user_input_5:
        mov  r2,r0
        jne  user_input_6
        mov  r3,r0
-       jne  user_input_6
-       inc  @inactivity_time
-       jmp  user_input_7
+       jeq  user_input_7
 user_input_6:
        mov  r2,@dx_old
        mov  r3,@dy_old
-       clr  @inactivity_time
 user_input_7:
        abs  @fire
        jeq  user_input_8
@@ -478,9 +479,11 @@ user_input_9:
 *
 move_player:
        .proc
+       mov  @x,@x_old
+       mov  @y,@y_old
 *      Check where we're going
        abs  @char_aligned
-       jeq  move_player_7
+       jeq  move_player_4
 *      Check one char away
        mov  @dx,r0
        sla  r0,3
@@ -492,19 +495,19 @@ move_player:
        a    @y,r1
        bl   @map_address
        movb *r0,r1
-       jeq  move_player_4
+       jeq  move_player_2
        cb   r1,@b_white
-       jne  move_player_6
+       jne  move_player_10
        mov  @trail_pointer,r1
-       jeq  move_player_7
-move_player_3:
+       jeq  move_player_4
+move_player_1:
        dect r1
        c    r0,*r1
-       jeq  move_player_6
+       jeq  move_player_10
        ci   r1,trail
-       jne  move_player_3
+       jne  move_player_1
 *      Check two chars away
-move_player_4:
+move_player_2:
        mov  r2,r0
        sla  r0,1
        a    @x,r0
@@ -513,56 +516,61 @@ move_player_4:
        a    @y,r1
        bl   @map_address
        cb   *r0,@b_white
-       jne  move_player_7
+       jne  move_player_4
        mov  @trail_pointer,r1
-       jeq  move_player_7
-move_player_5:
+       jeq  move_player_4
+move_player_3:
        dect r1
        c    r0,*r1
-       jeq  move_player_6
+       jeq  move_player_10
        ci   r1,trail
-       jne  move_player_5
-       jmp  move_player_7
-move_player_6:
-       clr  @vx
-       clr  @vy
-       jmp  move_player_13
+       jne  move_player_3
+       jmp  move_player_4
 *      Move x
-move_player_7:
+move_player_4:
        mov  @x,r0
        a    @vx,r0
        ci   r0,4
-       jlt  move_player_8
+       jlt  move_player_5
        ci   r0,256-4
-       jgt  move_player_8
+       jgt  move_player_5
        mov  r0,@x
 *      Move y
-move_player_8:
+move_player_5:
        mov  @y,r0
        a    @vy,r0
        ci   r0,4
-       jlt  move_player_9
+       jlt  move_player_6
        ci   r0,map_height_pixels-4
-       jgt  move_player_9
+       jgt  move_player_6
        mov  r0,@y
 *      Scroll
-move_player_9:
+move_player_6:
        mov  @y,r0
        ci   r0,middle_y
-       jhe  move_player_10
+       jhe  move_player_7
        clr  r0
-       jmp  move_player_12
-move_player_10:
+       jmp  move_player_9
+move_player_7:
        ci   r0,map_height_pixels-middle_y
-       jlt  move_player_11
+       jlt  move_player_8
        li   r0,map_height_pixels-(192-top_height)
-       jmp  move_player_12
-move_player_11:
+       jmp  move_player_9
+move_player_8:
        mov  @y,r0
        ai   r0,-middle_y
-move_player_12:
+move_player_9:
        mov  r0,@scroll_y
-move_player_13:
+move_player_10:
+       c    @x,@x_old
+       jne  move_player_11
+       c    @y,@y_old
+       jne  move_player_11
+       inc  @inactivity_time
+       jmp  move_player_12
+move_player_11:
+       clr  @inactivity_time
+move_player_12:
        .endproc
 *// move_player
 
@@ -891,7 +899,7 @@ update_fuse:
        abs  @fuse_active
        jne  update_fuse_2
        mov  @inactivity_time,r0
-       ci   r0,60
+       ci   r0,30
        jlt  update_fuse_6
 *      Start/restart fuse
        mov  @fuse_trail_pointer,r4
