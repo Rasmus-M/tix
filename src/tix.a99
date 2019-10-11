@@ -69,7 +69,7 @@ sprite_patters:
 char_patterns:
        equ  4
 font_patterns:
-       equ  96
+       equ  104
 flood_fill_stack_size:
        equ  512
 chr_zero:
@@ -101,8 +101,10 @@ padvar equ  stack+>20                  ; Start of pad variables
 *
 frame:
        equ  padvar+2
-status:
+lives:
        equ  frame+2
+status:
+       equ  lives+2
 score:
        equ  status+2
 old_score:
@@ -244,6 +246,8 @@ new_game:
        bl   @init_game
 new_level:
        bl   @init_level
+new_life:
+       bl   @resume_level
 game_loop:
        bl   @vsync
        bl   @update_vdp_regs
@@ -267,9 +271,13 @@ level_completed:
        bl   @wait
        jmp  new_level
 died:
+       dec  @lives
+       bl   @display_lives
        li   r2,60
        bl   @wait
-       jmp  new_game
+       mov  @lives,r0
+       jeq  new_game
+       jmp  new_life
 *// main
 
 *********************************************************************
@@ -279,6 +287,8 @@ died:
 init_game:
        .proc
        clr  @frame
+       li   r0,3
+       mov  r0,@lives
        clr  @score
        seto @old_score
 *      Top panel
@@ -338,10 +348,20 @@ init_level:
 *      Screen
        bl   @init_map
        bl   @display_area_required
+       bl   @display_lives
        .endproc
 spark_init:
        data 76,4,-1,0,76,252,1,0
 *// init_level
+
+*********************************************************************
+*
+* Resume level
+*
+resume_level:
+       .proc
+       .endproc
+*// resume_level
 
 *********************************************************************
 *
@@ -1409,7 +1429,7 @@ display_score:
        .proc
        c    @score,@old_score
        jeq  display_score_1
-       li   r0,26
+       li   r0,25
        mov  @score,r1
        li   r2,5
        bl   @display_tall_decimal
@@ -1455,6 +1475,40 @@ display_area_required:
        bl   @display_decimal
        .endproc
 *// display_area_required
+
+*********************************************************************
+*
+* Display lives
+*
+display_lives:
+       .proc
+       li   r0,namet1+31
+       bl   @display_lives_1
+       li   r0,namet2+31
+       bl   @display_lives_1
+       .endproc
+display_lives_1:
+       .proc
+       mov   @lives,r3
+       sla  r3,2
+       ai   r3,lives_0
+       li   r2,3
+display_lives_2:
+       movb *r3+,r1
+       bl   @vsbw
+       ai   r0,32
+       dec  r2
+       jne  display_lives_2
+       .endproc
+lives_0:
+       byte >e0,>e1,>e2,>00
+lives_1:
+       byte >e0,>e6,>e7,>00
+lives_2:
+       byte >e4,>e5,>e2,>00
+lives_3:
+       byte >e3,>e1,>e2,>00
+*// display_lives
 
 *********************************************************************
 *
@@ -1959,6 +2013,7 @@ b_d0:
        copy "chars.a99"
        copy "sprites.a99"
        copy "font.a99"
+top:
        copy "top.a99"
 
 * One extra map row to support scrolling
