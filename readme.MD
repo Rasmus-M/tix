@@ -1,6 +1,6 @@
 # TIX
 
-Tix is a port of the arcade game Qix for the TI-99/4A home computer, created September to November 2019.
+Tix is a port of the arcade game Qix for the TI-99/4A home computer, created September 2019.
 
 ## System requirements
 

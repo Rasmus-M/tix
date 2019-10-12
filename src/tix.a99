@@ -36,6 +36,8 @@ spratb equ  >3000                      ; Sprite attribute table base
 **
 * Constants
 *
+n_lives:
+       equ  3
 map_width:
        equ  32
 map_width_pixels:
@@ -287,7 +289,8 @@ died:
 init_game:
        .proc
        clr  @frame
-       li   r0,3
+       clr  @name_table_flag
+       li   r0,n_lives
        mov  r0,@lives
        clr  @score
        seto @old_score
@@ -309,22 +312,10 @@ init_game:
 *
 init_level:
        .proc
-       clr  @status
        clr  @area
        seto @old_area
        li   r0,3*inner_map_size/4
        mov  r0,@area_required
-       clr  @scroll_y
-       clr  @name_table_flag
-       clr  @trail_pointer
-       clr  @fuse_trail_pointer
-       clr  @fuse_active
-       clr  @inactivity_time
-*      Player
-       li   r0,132
-       mov  r0,@x
-       li   r0,4
-       mov  r0,@y
 *      Tix
        li   r0,tix_tail
        mov  r0,@tix_tail_pointer
@@ -340,18 +331,10 @@ init_level:
        mov  r4,@tix_x
        li   r5,132*16
        mov  r5,@tix_y
-*      Sparks
-       li   r0,spark_init
-       li   r1,spark_1_y
-       li   r2,16
-       bl   @copy
 *      Screen
        bl   @init_map
        bl   @display_area_required
-       bl   @display_lives
        .endproc
-spark_init:
-       data 76,4,-1,0,76,252,1,0
 *// init_level
 
 *********************************************************************
@@ -360,7 +343,47 @@ spark_init:
 *
 resume_level:
        .proc
+       clr  @status
+       clr  @scroll_y
+       clr  @fuse_trail_pointer
+       clr  @fuse_active
+       clr  @inactivity_time
+*      Player
+       li   r0,132
+       mov  r0,@x
+       li   r0,4
+       mov  r0,@y
+*      Sparks
+       li   r0,spark_init
+       li   r1,spark_1_y
+       li   r2,16
+       bl   @copy
+*      Screen
+       bl   @display_lives
+*      Check if first life
+       mov  @lives,r0
+       ci   r0,n_lives
+       jeq  resume_level_2
+*      Not first life
+       mov   @tix_dx,r0
+       sra  r0,2
+       s    r0,@tix_x
+       mov    @tix_dy,r1
+       sra  r1,2
+       s    r1,@tix_y
+       mov  @trail_pointer,r0
+       jeq  resume_level_2
+resume_level_1:
+       dect r0
+       mov  *r0,r1
+       movb @b_black,*r1
+       ci   r0,trail
+       jhe  resume_level_1
+       clr  @trail_pointer
+resume_level_2:
        .endproc
+spark_init:
+       data 76,4,-1,0,76,252,1,0
 *// resume_level
 
 *********************************************************************
