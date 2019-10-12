@@ -360,17 +360,7 @@ resume_level:
        bl   @copy
 *      Screen
        bl   @display_lives
-*      Check if first life
-       mov  @lives,r0
-       ci   r0,n_lives
-       jeq  resume_level_2
-*      Not first life
-       mov   @tix_dx,r0
-       sra  r0,2
-       s    r0,@tix_x
-       mov    @tix_dy,r1
-       sra  r1,2
-       s    r1,@tix_y
+*      Remove trail
        mov  @trail_pointer,r0
        jeq  resume_level_2
 resume_level_1:
