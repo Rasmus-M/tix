@@ -327,6 +327,7 @@ init_level:
        li   r0,3*inner_map_size/4
        mov  r0,@area_required
        clr  @time
+       clr  @displayed_time
 *      Tix
        li   r0,tix_tail
        mov  r0,@tix_tail_pointer
@@ -1529,7 +1530,7 @@ display_lives_1:
        bl   @vsbw
        ai   r0,32
        mov  @displayed_time,r2
-       ci   r2,15
+       ci   r2,16
        jne  display_lives_2
        inc  r3
 display_lives_2:
@@ -1552,19 +1553,54 @@ lives_3:
 *
 display_time:
        .proc
-       mov  @time,r1
-       andi r1,>001f
-       jne  display_time_1
-       mov  @time,r1
-       srl  r1,5
-       andi r1,>000f
-       neg  r1
-       ai   r1,15
-       mov  r1,@displayed_time
-       clr  r0
-       li   r2,2
-       bl   @display_decimal
+       mov  @time,r0
+       andi r0,>001f
+       jne  display_time_3
+*      Set displayed time
+       mov  @displayed_time,r0
+       jeq  display_time_1
+       dec  r0
+       jmp  display_time_2
 display_time_1:
+       li   r0,16
+display_time_2:
+       mov  r0,@displayed_time
+*      Display
+       li   r0,namet1+64
+       bl   @display_time_line
+       li   r0,namet2+64
+       bl   @display_time_line
+display_time_3:
+       .endproc
+display_time_line:
+       .proc
+       mov   @displayed_time,r3
+       ci   r3,16
+       jeq  display_time_line_1
+       mov  r0,r4
+       li   r5,16
+       a    r3,r5
+       a    r5,r0
+       bl   @vwad
+       movb @no_time_line(r5),*r15
+       mov  r4,r0
+       li   r5,15
+       s    r3,r5
+       a    r5,r0
+       bl   @vwad
+       movb @no_time_line(r5),*r15
+       jmp  display_time_line_3
+display_time_line_1:
+       li   r1,top+64
+       li   r2,31
+       bl   @vmbw
+       mov  @lives,r0
+       ci   r0,1
+       jne  display_time_line_2
+       inc  r1
+display_time_line_2:
+       movb *r1,*r15
+display_time_line_3:
        .endproc
 *// display_time
 
