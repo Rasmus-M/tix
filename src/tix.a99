@@ -74,6 +74,8 @@ font_patterns:
        equ  104
 flood_fill_stack_size:
        equ  512
+chr_space:
+       equ  128
 chr_zero:
        equ  144
 chr_zero_tall:
@@ -269,17 +271,23 @@ game_loop:
        jlt  died
        jmp  game_loop
 level_completed:
-       li   r2,60
+       li   r2,120
        bl   @wait
        jmp  new_level
 died:
        dec  @lives
        bl   @display_lives
-       li   r2,60
+       li   r2,120
        bl   @wait
        mov  @lives,r0
-       jeq  new_game
-       jmp  new_life
+       jne  new_life
+*      Game over
+       li   r0,11*32+12
+       li   r1,txt_game_over
+       bl   @display_text
+       li   r2,120
+       bl   @wait
+       jmp  new_game
 *// main
 
 *********************************************************************
@@ -1627,6 +1635,38 @@ d10:
 
 *********************************************************************
 *
+* Display text
+*
+* r0: Screen offset
+* r1: String to display (0 terminated)
+*
+display_text:
+       .proc
+*      1st name table buffer
+       mov  r0,r3
+       ai   r0,namet1
+       mov  r1,r4
+       bl   @vwad
+       bl   @display_text_line
+*      2nd name table buffer
+       mov  r3,r0
+       ai   r0,namet2
+       mov  r4,r1
+       bl   @vwad
+       bl   @display_text_line
+       .endproc
+display_text_line:
+       movb *r1+,r2
+       jeq  display_text_line_1
+       ai   r2,(chr_space-32)*256
+       movb r2,*r15
+       jmp  display_text_line
+display_text_line_1:
+       rt
+*// display_text
+
+*********************************************************************
+*
 * One time initializations
 *
 one_time_init:
@@ -2010,6 +2050,11 @@ wait_1:
 *
 * Data
 *
+txt_game_over:
+       text "GAME OVER"
+       byte 0
+
+       even
 b_black:
        byte black
 b_white:
