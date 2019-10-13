@@ -71,7 +71,7 @@ sprite_patters:
 char_patterns:
        equ  4
 font_patterns:
-       equ  104
+       equ  119
 flood_fill_stack_size:
        equ  512
 chr_space:
@@ -103,10 +103,8 @@ padvar equ  stack+>20                  ; Start of pad variables
 **
 * PAD variables
 *
-frame:
-       equ  padvar+2
 lives:
-       equ  frame+2
+       equ  padvar+2
 status:
        equ  lives+2
 score:
@@ -119,8 +117,12 @@ old_area:
        equ  area+2
 area_required:
        equ  old_area+2
-y:
+time:
        equ  area_required+2
+displayed_time:
+       equ  time+2
+y:
+       equ  displayed_time+2
 x:
        equ  y+2
 vy:
@@ -265,7 +267,8 @@ game_loop:
        bl   @upload_map
        bl   @display_score
        bl   @display_area
-       inc  @frame
+       bl   @display_time
+       inc  @time
        mov  @status,r0
        jgt  level_completed
        jlt  died
@@ -296,7 +299,6 @@ died:
 *
 init_game:
        .proc
-       clr  @frame
        clr  @name_table_flag
        li   r0,n_lives
        mov  r0,@lives
@@ -324,6 +326,7 @@ init_level:
        seto @old_area
        li   r0,3*inner_map_size/4
        mov  r0,@area_required
+       clr  @time
 *      Tix
        li   r0,tix_tail
        mov  r0,@tix_tail_pointer
@@ -372,6 +375,7 @@ resume_level:
        li   r2,16
        bl   @copy
 *      Screen
+       bl   @display_time
        bl   @display_lives
 *      Remove trail
        mov  @trail_pointer,r0
@@ -1143,7 +1147,7 @@ upload_sprite:
 upload_sprite_1:
        swpb r1
        mov  r1,*r15
-       mov  @frame,r1                  ; Animation frame
+       mov  @time,r1                  ; Animation frame
        andi r1,>000c
        swpb r1                         ; Pattern
        soc  r2,r1
@@ -1518,23 +1522,51 @@ display_lives_1:
        mov   @lives,r3
        sla  r3,2
        ai   r3,lives_0
-       li   r2,3
-display_lives_2:
        movb *r3+,r1
        bl   @vsbw
        ai   r0,32
-       dec  r2
+       movb *r3+,r1
+       bl   @vsbw
+       ai   r0,32
+       mov  @displayed_time,r2
+       ci   r2,15
        jne  display_lives_2
+       inc  r3
+display_lives_2:
+       movb *r3,r1
+       bl   @vsbw
        .endproc
 lives_0:
-       byte >e0,>e1,>e2,>00
+       byte >e0,>e1,>e2,>eb
 lives_1:
-       byte >e0,>e6,>e7,>00
+       byte >e0,>e6,>e7,>ec
 lives_2:
-       byte >e4,>e5,>e2,>00
+       byte >e4,>e5,>e2,>eb
 lives_3:
-       byte >e3,>e1,>e2,>00
+       byte >e3,>e1,>e2,>eb
 *// display_lives
+
+*********************************************************************
+*
+* Display time
+*
+display_time:
+       .proc
+       mov  @time,r1
+       andi r1,>001f
+       jne  display_time_1
+       mov  @time,r1
+       srl  r1,5
+       andi r1,>000f
+       neg  r1
+       ai   r1,15
+       mov  r1,@displayed_time
+       clr  r0
+       li   r2,2
+       bl   @display_decimal
+display_time_1:
+       .endproc
+*// display_time
 
 *********************************************************************
 *
@@ -2079,11 +2111,19 @@ b_d0:
 top:
        copy "top.a99"
 
+* 3rd top row without red time line
+no_time_line:
+       DATA >8080,>E8E9,>E9E9,>E9EA    ;
+       DATA >8080,>8080,>8080,>8080    ;
+       DATA >8080,>8080,>8080,>8080    ;
+       DATA >8080,>8080,>8080,>80EB    ;
+       DATA >EC00                      ;
+
 * One extra map row to support scrolling
-       DATA >0303,>0303,>0303,>0303    ;
-       DATA >0303,>0303,>0303,>0303    ;
-       DATA >0303,>0303,>0303,>0303    ;
-       DATA >0303,>0303,>0303,>0303    ;
+       DATA >0101,>0101,>0101,>0101    ;
+       DATA >0101,>0101,>0101,>0101    ;
+       DATA >0101,>0101,>0101,>0101    ;
+       DATA >0101,>0101,>0101,>0101    ;
 map:
        bss  map_size
 map_backup:
