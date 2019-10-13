@@ -339,6 +339,11 @@ init_level:
        mov  r4,@tix_x
        li   r5,132*16
        mov  r5,@tix_y
+init_level_1:
+       mov  r5,*r3+
+       mov  r4,*r3+
+       dec  r2
+       jne  init_level_1
 *      Screen
        bl   @init_map
        bl   @display_area_required
