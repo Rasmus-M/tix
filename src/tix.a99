@@ -285,6 +285,10 @@ died:
        mov  @lives,r0
        jne  new_life
 *      Game over
+       li   r0,10*32+11
+       li   r1,11
+       li   r2,3
+       bl   @display_box
        li   r0,11*32+12
        li   r1,txt_game_over
        bl   @display_text
@@ -1531,7 +1535,7 @@ display_lives_1:
        ai   r0,32
        mov  @displayed_time,r2
        ci   r2,16
-       jne  display_lives_2
+       jeq  display_lives_2
        inc  r3
 display_lives_2:
        movb *r3,r1
@@ -1551,10 +1555,13 @@ lives_3:
 *
 * Display time
 *
+* When @displayed_time=16, the full line is displayed.
+* When @displayed_time=0, no line is displayed.
+*
 display_time:
        .proc
        mov  @time,r0
-       andi r0,>001f
+       andi r0,>003f
        jne  display_time_3
 *      Set displayed time
        mov  @displayed_time,r0
@@ -1577,10 +1584,18 @@ display_time_line:
        mov   @displayed_time,r3
        ci   r3,16
        jeq  display_time_line_1
+*      Remove one character of the line
        mov  r0,r4
        li   r5,16
        a    r3,r5
        a    r5,r0
+       ci   r5,31
+       jne  display_time_line_4
+       mov  @lives,r7
+       ci   r7,1
+       jne  display_time_line_4
+       inc  r5
+display_time_line_4:
        bl   @vwad
        movb @no_time_line(r5),*r15
        mov  r4,r0
@@ -1590,6 +1605,7 @@ display_time_line:
        bl   @vwad
        movb @no_time_line(r5),*r15
        jmp  display_time_line_3
+*      Redraw the full line
 display_time_line_1:
        li   r1,top+64
        li   r2,31
@@ -1737,6 +1753,85 @@ display_text_line:
 display_text_line_1:
        rt
 *// display_text
+
+*********************************************************************
+*
+* Display box
+*
+* r0: Screen offset
+* r1: Width
+* r2: Height
+*
+box_top_left:
+       byte >ed
+box_top:
+       byte >ee
+box_top_right:
+       byte >ef
+box_left:
+       byte >f0
+box_middle:
+       byte chr_space
+box_right:
+       byte >f1
+box_bottom_left:
+       byte >f2
+box_bottom:
+       byte >f3
+box_bottom_right:
+       byte >f4
+       even
+display_box:
+       .proc
+       mov  r0,r4
+       mov  r1,r5
+       mov  r2,r6
+       ai   r0,namet1
+       bl   @display_box_1
+       mov  r4,r0
+       mov  r5,r1
+       mov  r6,r2
+       ai   r0,namet2
+       bl   @display_box_1
+       .endproc
+display_box_1:
+       .proc
+*      Top row
+       bl   @vwad
+       movb @box_top_left,*r15
+       dect r1
+       mov  r1,r3
+display_box_2:
+       movb @box_top,*r15
+       dec  r3
+       jne  display_box_2
+       movb @box_top_right,*r15
+*      Middle rows
+       dect r2
+display_box_3:
+       ai   r0,32
+       bl   @vwad
+       movb @box_left,*r15
+       mov  r1,r3
+display_box_4:
+       movb @box_middle,*r15
+       dec  r3
+       jne  display_box_4
+       movb @box_right,*r15
+       dec  r2
+       jne  display_box_3
+*      Bottom row
+       ai   r0,32
+       bl   @vwad
+       movb @box_bottom_left,*r15
+       mov  r1,r3
+display_box_5:
+       movb @box_bottom,*r15
+       dec  r3
+       jne  display_box_5
+       movb @box_bottom_right,*r15
+       .endproc
+*// display_box
 
 *********************************************************************
 *
@@ -2146,6 +2241,7 @@ b_d0:
        copy "font.a99"
 top:
        copy "top.a99"
+       data >E700                      ; Last character with white tix
 
 * 3rd top row without red time line
 no_time_line:
@@ -2153,7 +2249,7 @@ no_time_line:
        DATA >8080,>8080,>8080,>8080    ;
        DATA >8080,>8080,>8080,>8080    ;
        DATA >8080,>8080,>8080,>80EB    ;
-       DATA >EC00                      ;
+       DATA >EC00                      ; Last character with white tix
 
 * One extra map row to support scrolling
        DATA >0101,>0101,>0101,>0101    ;
