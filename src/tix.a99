@@ -141,8 +141,12 @@ dy_old:
        equ  x_old+2
 dx_old:
        equ  dy_old+2
-fire:
+last_safe_y:
        equ  dx_old+2
+last_safe_x:
+       equ  last_safe_y+2
+fire:
+       equ  last_safe_x+2
 slow:
        equ  fire+2
 char_aligned:
@@ -332,6 +336,12 @@ init_level:
        mov  r0,@area_required
        clr  @time
        clr  @displayed_time
+       clr  @trail_pointer
+*      Player
+       li   r0,132
+       mov  r0,@x
+       li   r0,4
+       mov  r0,@y
 *      Tix
        li   r0,tix_tail
        mov  r0,@tix_tail_pointer
@@ -369,22 +379,13 @@ resume_level:
        clr  @fuse_trail_pointer
        clr  @fuse_active
        clr  @inactivity_time
-*      Player
-       li   r0,132
-       mov  r0,@x
-       li   r0,4
-       mov  r0,@y
-*      Sparks
-       li   r0,spark_init
-       li   r1,spark_1_y
-       li   r2,16
-       bl   @copy
-*      Screen
-       bl   @display_time
-       bl   @display_lives
-*      Remove trail
+*      Check for trail
        mov  @trail_pointer,r0
        jeq  resume_level_2
+*      Move player to start of trail
+       mov  @last_safe_x,@x
+       mov  @last_safe_y,@y
+*      Remove trail
 resume_level_1:
        dect r0
        mov  *r0,r1
@@ -393,6 +394,14 @@ resume_level_1:
        jhe  resume_level_1
        clr  @trail_pointer
 resume_level_2:
+*      Sparks
+       li   r0,spark_init
+       li   r1,spark_1_y
+       li   r2,16
+       bl   @copy
+*      Screen
+       bl   @display_time
+       bl   @display_lives
        .endproc
 spark_init:
        data 76,4,-1,0,76,252,1,0
@@ -648,7 +657,7 @@ move_player_12:
 plot_trail:
        .proc
        abs  @char_aligned
-       jeq  plot_trail_4
+       jeq  plot_trail_5
        mov  @x,r0
        mov  @y,r1
        bl   @map_address
@@ -664,14 +673,14 @@ plot_trail_0:
        mov  r1,@trail_pointer
        li   r2,>0100
        movb r2,*r0                     ; Plot
-       jmp  plot_trail_4
+       jmp  plot_trail_5
 *      Not empty position
 plot_trail_1:
        mov  @trail_pointer,r1
        jeq  plot_trail_4               ; No trail
        dect r1
        c    r0,*r1
-       jeq  plot_trail_4
+       jeq  plot_trail_5
 *      End of trail:
        bl   @fill_area
        a    r0,@area
@@ -687,7 +696,11 @@ plot_trail_3:
        clr  @trail_pointer
        clr  @fuse_trail_pointer
        clr  @fuse_active
+       jmp  plot_trail_5
 plot_trail_4:
+       mov  @x_old,@last_safe_x
+       mov  @y_old,@last_safe_y
+plot_trail_5:
        .endproc
 *// plot_trail
 
