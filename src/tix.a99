@@ -285,6 +285,7 @@ level_completed:
 died:
        dec  @lives
        bl   @display_lives
+       bl   @split_effect
        li   r2,120
        bl   @wait
        mov  @lives,r0
@@ -1915,7 +1916,46 @@ join_dirs:
 *
 split_effect:
        .proc
+*      Initialize sprite positions
+       li   r3,buffer
+       li   r2,4
+split_effect_1:
+       mov  @y,*r3+
+       mov  @x,*r3+
+       dec  r2
+       jne  split_effect_1
+*      Loop
+       li   r0,63
+       mov  r0,@time
+split_effect_2:
+       bl   @vsync
+*      Upload sprites
+       li   r0,spratb
+       bl   @vwad
+       li   r4,>000d
+       li   r3,buffer
+       li   r5,4
+split_effect_3:
+       bl   @upload_sprite
+       dec  r5
+       jne  split_effect_3
+       movb @b_d0,*r15
+*      Move sprites
+       li   r2,4
+       li   r3,buffer
+       li   r5,split_dirs
+split_effect_4:
+       a    *r5+,*r3+
+       a    *r5+,*r3+
+*      Next sprite
+       dec  r2
+       jne  split_effect_4
+*      Next frame
+       dec  @time
+       jne  split_effect_2
        .endproc
+split_dirs:
+       data 2,2,-2,2,-2,-2,2,-2
 *// split_effect
 
 *********************************************************************
