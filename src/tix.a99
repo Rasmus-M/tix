@@ -680,20 +680,22 @@ plot_trail_5:
 *
 move_tix:
        .proc
-*      Move towards player
+*      Check if trailing
        mov  @trail_pointer,r0
        jeq  move_tix_5
+*      Move towards player
        mov  @x,r0
        sla  r0,4
        s    @tix_x,r0
-       sra  r0,6
+       sra  r0,7
        mov  r0,@tix_ax
        mov  @y,r1
        sla  r1,4
        s    @tix_y,r1
-       sra  r1,6
+       sra  r1,7
        mov  r1,@tix_ay
        jmp  move_tix_0
+*      Just move
 move_tix_5:
        clr  @tix_ax
        clr  @tix_ay
@@ -1348,6 +1350,9 @@ level_completed:
        li   r1,>d000
        bl   @vsbw
        bl   @refresh_screen
+*      Pause
+       li   r2,120
+       bl   @wait
 *      Display result
        li   r0,3*32
        li   r1,32
