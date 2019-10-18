@@ -249,59 +249,37 @@ main:
        limi 0                          ; Interrupts off
        lwpi wrksp                      ; Setup workspace
        li   r10,stack                  ; Setup stack pointer
-       li   r15,vdpwd
-       bl   @graphics_mode
        bl   @one_time_init
 new_game:
+       bl   @intro
        bl   @init_game
 new_level:
        bl   @init_level
 new_life:
        bl   @resume_level
        bl   @join_effect
-game_loop:
-       bl   @vsync
-       bl   @update_vdp_regs
-       bl   @user_input
-       bl   @move_player
-       bl   @plot_trail
-       bl   @move_tix
-       bl   @update_sparks
-       bl   @update_fuse
-       bl   @upload_sprites
-       bl   @upload_map
-       bl   @display_score
-       bl   @display_area
-       bl   @display_time
-       inc  @time
+       bl   @game_loop
        mov  @status,r0
-       jgt  level_completed
-       jlt  died
-       jmp  game_loop
-level_completed:
-       li   r2,120
-       bl   @wait
+       jlt  die
+       bl   @level_completed
        jmp  new_level
-died:
-       dec  @lives
-       bl   @display_lives
-       bl   @split_effect
-       li   r2,60
-       bl   @wait
+die:
+       bl   @died
        mov  @lives,r0
        jne  new_life
 *      Game over
-       li   r0,10*32+11
-       li   r1,11
-       li   r2,3
-       bl   @display_box
-       li   r0,11*32+12
-       li   r1,txt_game_over
-       bl   @display_text
-       li   r2,120
-       bl   @wait
+       bl   @game_over
        jmp  new_game
 *// main
+
+*********************************************************************
+*
+* Show intro
+*
+intro:
+       .proc
+       .endproc
+*// intro
 
 *********************************************************************
 *
@@ -355,7 +333,7 @@ init_level:
        mov  r1,@tix_dy
        li   r2,tix_tail_size/4
        li   r3,tix_tail
-       li   r4,132*16
+       li   r4,196*16
        mov  r4,@tix_x
        li   r5,132*16
        mov  r5,@tix_y
@@ -411,46 +389,29 @@ spark_init:
 
 *********************************************************************
 *
-* Init map
+* Game loop
 *
-init_map:
+game_loop:
        .proc
-       li   r0,map
-       li   r2,map_size
-       bl   @clear
-       li   r0,white*256
-*      Top
-       li   r1,map
-       li   r2,map_width
-init_map_1:
-       movb r0,*r1+
-       dec  r2
-       jne  init_map_1
-*      Bottom
-       li   r1,map+((map_height-1)*map_width)
-       li   r2,map_width
-init_map_2:
-       movb r0,*r1+
-       dec  r2
-       jne  init_map_2
-*      Left
-       li   r1,map
-       li   r2,map_height
-init_map_3:
-       movb r0,*r1
-       ai   r1,map_width
-       dec  r2
-       jne  init_map_3
-*      Right
-       li   r1,map+(map_width-1)
-       li   r2,map_height
-init_map_4:
-       movb r0,*r1
-       ai   r1,map_width
-       dec  r2
-       jne  init_map_4
+game_loop_1:
+       bl   @vsync
+       bl   @update_vdp_regs
+       bl   @user_input
+       bl   @move_player
+       bl   @plot_trail
+       bl   @move_tix
+       bl   @update_sparks
+       bl   @update_fuse
+       bl   @upload_sprites
+       bl   @upload_map
+       bl   @display_score
+       bl   @display_area
+       bl   @display_time
+       inc  @time
+       mov  @status,r0
+       jeq  game_loop_1
        .endproc
-*// init_map
+*// game_loop
 
 *********************************************************************
 *
@@ -1263,6 +1224,156 @@ upload_map_2
 
 *********************************************************************
 *
+* Display score
+*
+display_score:
+       .proc
+       c    @score,@old_score
+       jeq  display_score_1
+       li   r0,25
+       mov  @score,r1
+       li   r2,5
+       bl   @display_tall_decimal
+       mov  @score,@old_score
+display_score_1:
+       .endproc
+*// display_score
+
+*********************************************************************
+*
+* Display area
+*
+display_area:
+       .proc
+       c    @area,@old_area
+       jeq  display_area_1
+       mov  @area,r0
+       mpy  @d10,r0                    ; r1=area*10, r0=0
+       li   r2,inner_map_size/10
+       div  r2,r0                      ; area*10/(total_area/10)=100*area/total_area
+       mov  r0,r1
+       li   r0,45
+       li   r2,2
+       bl   @display_decimal
+       mov  @area,@old_area
+display_area_1:
+       .endproc
+*// display_area
+
+*********************************************************************
+*
+* Display time
+*
+* When @displayed_time=16, the full line is displayed.
+* When @displayed_time=0, no line is displayed.
+*
+display_time:
+       .proc
+       mov  @time,r0
+       andi r0,>003f
+       jne  display_time_3
+*      Set displayed time
+       mov  @displayed_time,r0
+       jeq  display_time_1
+       dec  r0
+       jmp  display_time_2
+display_time_1:
+       li   r0,16
+display_time_2:
+       mov  r0,@displayed_time
+*      Display
+       li   r0,namet1+64
+       bl   @display_time_line
+       li   r0,namet2+64
+       bl   @display_time_line
+display_time_3:
+       .endproc
+display_time_line:
+       .proc
+       mov   @displayed_time,r3
+       ci   r3,16
+       jeq  display_time_line_1
+*      Remove one character of the line
+       mov  r0,r4
+       li   r5,16
+       a    r3,r5
+       a    r5,r0
+       ci   r5,31
+       jne  display_time_line_4
+       mov  @lives,r7
+       ci   r7,1
+       jne  display_time_line_4
+       inc  r5
+display_time_line_4:
+       bl   @vwad
+       movb @no_time_line(r5),*r15
+       mov  r4,r0
+       li   r5,15
+       s    r3,r5
+       a    r5,r0
+       bl   @vwad
+       movb @no_time_line(r5),*r15
+       jmp  display_time_line_3
+*      Redraw the full line
+display_time_line_1:
+       li   r1,top+64
+       li   r2,31
+       bl   @vmbw
+       mov  @lives,r0
+       ci   r0,1
+       jne  display_time_line_2
+       inc  r1
+display_time_line_2:
+       movb *r1,*r15
+display_time_line_3:
+       .endproc
+*// display_time
+
+*********************************************************************
+*
+* Level completed
+*
+level_completed:
+       .proc
+       li   r2,120
+       bl   @wait
+       .endproc
+*// level_completed
+
+*********************************************************************
+*
+* Player died
+*
+died:
+       .proc
+       dec  @lives
+       bl   @display_lives
+       bl   @split_effect
+       li   r2,60
+       bl   @wait
+       .endproc
+*// died
+
+*********************************************************************
+*
+* Game over
+*
+game_over:
+       .proc
+       li   r0,10*32+11
+       li   r1,11
+       li   r2,3
+       bl   @display_box
+       li   r0,11*32+12
+       li   r1,txt_game_over
+       bl   @display_text
+       li   r2,120
+       bl   @wait
+       .endproc
+*// game_over
+
+*********************************************************************
+*
 * Fill area
 *
 * On return r0 contains the number of tiles filled, incuding outline
@@ -1316,6 +1427,49 @@ fill_area_3:
        a    r4,r0
        .endproc
 *// fill_area
+
+*********************************************************************
+*
+* Init map
+*
+init_map:
+       .proc
+       li   r0,map
+       li   r2,map_size
+       bl   @clear
+       li   r0,white*256
+*      Top
+       li   r1,map
+       li   r2,map_width
+init_map_1:
+       movb r0,*r1+
+       dec  r2
+       jne  init_map_1
+*      Bottom
+       li   r1,map+((map_height-1)*map_width)
+       li   r2,map_width
+init_map_2:
+       movb r0,*r1+
+       dec  r2
+       jne  init_map_2
+*      Left
+       li   r1,map
+       li   r2,map_height
+init_map_3:
+       movb r0,*r1
+       ai   r1,map_width
+       dec  r2
+       jne  init_map_3
+*      Right
+       li   r1,map+(map_width-1)
+       li   r2,map_height
+init_map_4:
+       movb r0,*r1
+       ai   r1,map_width
+       dec  r2
+       jne  init_map_4
+       .endproc
+*// init_map
 
 *********************************************************************
 *
@@ -1511,44 +1665,6 @@ map_coords:
 
 *********************************************************************
 *
-* Display score
-*
-display_score:
-       .proc
-       c    @score,@old_score
-       jeq  display_score_1
-       li   r0,25
-       mov  @score,r1
-       li   r2,5
-       bl   @display_tall_decimal
-       mov  @score,@old_score
-display_score_1:
-       .endproc
-*// display_score
-
-*********************************************************************
-*
-* Display area
-*
-display_area:
-       .proc
-       c    @area,@old_area
-       jeq  display_area_1
-       mov  @area,r0
-       mpy  @d10,r0                    ; r1=area*10, r0=0
-       li   r2,inner_map_size/10
-       div  r2,r0                      ; area*10/(total_area/10)=100*area/total_area
-       mov  r0,r1
-       li   r0,45
-       li   r2,2
-       bl   @display_decimal
-       mov  @area,@old_area
-display_area_1:
-       .endproc
-*// display_area
-
-*********************************************************************
-*
 * Display area required
 *
 display_area_required:
@@ -1603,75 +1719,6 @@ lives_2:
 lives_3:
        byte >e3,>e1,>e2,>eb
 *// display_lives
-
-*********************************************************************
-*
-* Display time
-*
-* When @displayed_time=16, the full line is displayed.
-* When @displayed_time=0, no line is displayed.
-*
-display_time:
-       .proc
-       mov  @time,r0
-       andi r0,>003f
-       jne  display_time_3
-*      Set displayed time
-       mov  @displayed_time,r0
-       jeq  display_time_1
-       dec  r0
-       jmp  display_time_2
-display_time_1:
-       li   r0,16
-display_time_2:
-       mov  r0,@displayed_time
-*      Display
-       li   r0,namet1+64
-       bl   @display_time_line
-       li   r0,namet2+64
-       bl   @display_time_line
-display_time_3:
-       .endproc
-display_time_line:
-       .proc
-       mov   @displayed_time,r3
-       ci   r3,16
-       jeq  display_time_line_1
-*      Remove one character of the line
-       mov  r0,r4
-       li   r5,16
-       a    r3,r5
-       a    r5,r0
-       ci   r5,31
-       jne  display_time_line_4
-       mov  @lives,r7
-       ci   r7,1
-       jne  display_time_line_4
-       inc  r5
-display_time_line_4:
-       bl   @vwad
-       movb @no_time_line(r5),*r15
-       mov  r4,r0
-       li   r5,15
-       s    r3,r5
-       a    r5,r0
-       bl   @vwad
-       movb @no_time_line(r5),*r15
-       jmp  display_time_line_3
-*      Redraw the full line
-display_time_line_1:
-       li   r1,top+64
-       li   r2,31
-       bl   @vmbw
-       mov  @lives,r0
-       ci   r0,1
-       jne  display_time_line_2
-       inc  r1
-display_time_line_2:
-       movb *r1,*r15
-display_time_line_3:
-       .endproc
-*// display_time
 
 *********************************************************************
 *
@@ -2002,6 +2049,8 @@ split_dirs:
 *
 one_time_init:
        .proc
+       li   r15,vdpwd
+       bl   @graphics_mode
 *      Patterns
        li   r0,ptrntb
        li   r1,chars
@@ -2384,7 +2433,18 @@ wait_1:
 txt_game_over:
        text "GAME OVER"
        byte 0
-
+txt_percentage:
+       text "PERCENTAGE"
+       byte 0
+txt_threshold:
+       text "THRESHOLD"
+       byte 0
+txt_bonus:
+       text "BONUS"
+       byte 0
+txt_x:
+       text "X"
+       byte 0
        even
 b_black:
        byte black
