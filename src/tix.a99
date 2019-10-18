@@ -286,7 +286,7 @@ died:
        dec  @lives
        bl   @display_lives
        bl   @split_effect
-       li   r2,120
+       li   r2,60
        bl   @wait
        mov  @lives,r0
        jne  new_life
@@ -1183,6 +1183,44 @@ upload_sprite_3:
 
 *********************************************************************
 *
+* Upload sprite simple
+*
+* r3: points to y
+* r4: contains base pattern and color
+*
+upload_sprite_simple:
+       mov  *r3+,r1                    ; y
+       s    @scroll_y,r1
+       ai   r1,top_height
+       ci   r1,-8
+       jlt  upload_sprite_simple_2
+       ci   r1,192+8
+       jhe  upload_sprite_simple_2
+       mov  *r3+,r0                    ; x
+       ci   r0,-8
+       jlt  upload_sprite_simple_3
+       ci   r0,256+8
+       jhe  upload_sprite_simple_3
+       ci   r0,8
+       jgt  upload_sprite_simple_1
+       ai   r0,32                      ; EC
+       ori  r4,>0080
+upload_sprite_simple_1:
+       ai   r1,-9
+       movb @r1lb,*r15
+       ai   r0,-8
+       movb @r0lb,*r15
+       movb r4,*r15                    ; Pattern
+       movb @r4lb,*r15                 ; Color
+       jmp  upload_sprite_simple_3
+upload_sprite_simple_2:
+       inct r3
+upload_sprite_simple_3:
+       rt
+*// upload_sprite_simple
+
+*********************************************************************
+*
 * Upload one screen of map to VDP
 *
 upload_map:
@@ -1875,7 +1913,7 @@ join_effect_1:
        dec  r2
        jne  join_effect_1
 *      Loop
-       li   r0,63
+       li   r0,127
        mov  r0,@time
 join_effect_2:
        bl   @vsync
@@ -1886,7 +1924,7 @@ join_effect_2:
        li   r3,buffer
        li   r5,4
 join_effect_3:
-       bl   @upload_sprite
+       bl   @upload_sprite_simple
        dec  r5
        jne  join_effect_3
        movb @b_d0,*r15
@@ -1905,7 +1943,7 @@ join_effect_4:
        jne  join_effect_2
        .endproc
 join_coords:
-       data -128,-128,128,-128,128,128,-128,128
+       data -256,-256,256,-256,256,256,-256,256
 join_dirs:
        data 2,2,-2,2,-2,-2,2,-2
 *// join_effect
@@ -1925,7 +1963,7 @@ split_effect_1:
        dec  r2
        jne  split_effect_1
 *      Loop
-       li   r0,63
+       li   r0,127
        mov  r0,@time
 split_effect_2:
        bl   @vsync
@@ -1936,7 +1974,7 @@ split_effect_2:
        li   r3,buffer
        li   r5,4
 split_effect_3:
-       bl   @upload_sprite
+       bl   @upload_sprite_simple
        dec  r5
        jne  split_effect_3
        movb @b_d0,*r15
