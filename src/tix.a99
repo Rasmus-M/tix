@@ -109,20 +109,28 @@ status:
        equ  lives+2
 score:
        equ  status+2
-old_score:
+score_msw:
        equ  score+2
+old_score:
+       equ  score_msw+2
 area:
        equ  old_score+2
 old_area:
        equ  area+2
 area_required:
        equ  old_area+2
-time:
+area_percent:
        equ  area_required+2
+area_required_percent:
+       equ  area_percent+2
+time:
+       equ  area_required_percent+2
 displayed_time:
        equ  time+2
-y:
+level:
        equ  displayed_time+2
+y:
+       equ  level+2
 x:
        equ  y+2
 vy:
@@ -292,6 +300,7 @@ init_game:
        mov  r0,@lives
        clr  @score
        seto @old_score
+       clr  @level
 *      Top panel
        li   r0,namet1
        li   r1,top
@@ -344,7 +353,6 @@ init_level_1:
        jne  init_level_1
 *      Screen
        bl   @init_map
-       bl   @display_area_required
        .endproc
 *// init_level
 
@@ -380,8 +388,7 @@ resume_level_2:
        li   r2,16
        bl   @copy
 *      Screen
-       bl   @display_time
-       bl   @display_lives
+       bl   @refresh_screen
        .endproc
 spark_init:
        data 76,4,-1,0,76,252,1,0
@@ -395,7 +402,7 @@ game_loop:
        .proc
 game_loop_1:
        bl   @vsync
-       bl   @update_vdp_regs
+       bl   @set_vdp_regs
        bl   @user_input
        bl   @move_player
        bl   @plot_trail
@@ -429,9 +436,9 @@ vsync_1:
 
 ***************************************************************
 *
-* Update VDP registers
+* Set VDP registers
 *
-update_vdp_regs:
+set_vdp_regs:
        .proc
 *      Set name table
        mov  @name_table_flag,r0
@@ -440,7 +447,7 @@ update_vdp_regs:
        bl   @vwtr
        inv  @name_table_flag
        .endproc
-*// update_vdp_regs
+*// set_vdp_regs
 
 *********************************************************************
 *
@@ -1251,8 +1258,9 @@ display_area:
        mpy  @d10,r0                    ; r1=area*10, r0=0
        li   r2,inner_map_size/10
        div  r2,r0                      ; area*10/(total_area/10)=100*area/total_area
+       mov  r0,@area_percent
        mov  r0,r1
-       li   r0,45
+       li   r0,44
        li   r2,2
        bl   @display_decimal
        mov  @area,@old_area
@@ -1335,8 +1343,56 @@ display_time_line_3:
 *
 level_completed:
        .proc
+*      Refresh screen
+       li   r0,spratb
+       li   r1,>d000
+       bl   @vsbw
+       bl   @refresh_screen
+*      Display result
+       li   r0,3*32
+       li   r1,32
+       li   r2,21
+       bl   @display_box
+*      Area claimed
+       li   r0,9*32+9
+       li   r1,txt_percentage
+       bl   @display_text
+       li   r0,9*32+21
+       mov  @area_percent,r1
+       li   r2,2
+       bl   @display_decimal
+*      Area required
+       li   r0,11*32+9
+       li   r1,txt_threshold
+       bl   @display_text
+       li   r0,11*32+21
+       mov  @area_required_percent,r1
+       li   r2,2
+       bl   @display_decimal
+*      Bonus
+       li   r0,13*32+9
+       li   r1,txt_bonus
+       bl   @display_text
+       li   r0,13*32+15
+       mov  @area_percent,r1
+       s    @area_required_percent,r1
+       li   r2,2
+       bl   @display_decimal
+*      Bonus points
+       mov  @area_percent,r1
+       s    @area_required_percent,r1
+       mpy  @d1000,r1
+       mov  r2,r1
+       a    r1,@score
+       li   r2,5
+       li   r0,15*32+14
+       bl   @display_decimal
+       bl   @display_score
+*      Pause
        li   r2,120
        bl   @wait
+*      Next level
+       inc  @level
        .endproc
 *// level_completed
 
@@ -1470,6 +1526,26 @@ init_map_4:
        jne  init_map_4
        .endproc
 *// init_map
+
+*********************************************************************
+*
+* Refresh screen
+*
+refresh_screen:
+       .proc
+       bl   @display_score
+       bl   @display_area
+       bl   @display_area_required
+       bl   @display_time
+       bl   @display_lives
+       bl   @upload_map
+       bl   @vsync
+       bl   @set_vdp_regs
+       bl   @upload_map
+       bl   @vsync
+       bl   @set_vdp_regs
+       .endproc
+*// refresh_map
 
 *********************************************************************
 *
@@ -1673,8 +1749,9 @@ display_area_required:
        mpy  @d10,r0                    ; r1=area*10, r0=0
        li   r2,inner_map_size/10
        div  r2,r0                      ; area*10/(total_area/10)=100*area/total_area
+       mov  r0,@area_required_percent
        mov  r0,r1
-       li   r0,49
+       li   r0,48
        li   r2,2
        bl   @display_decimal
        .endproc
@@ -1812,14 +1889,6 @@ bin_to_dec_1:
        swpb r1
        movb r1,*r4+
        rt
-d10000:
-       data 10000
-d1000:
-       data 1000
-d100:
-       data 100
-d10:
-       data 10
 *// bin_to_dec
 
 *********************************************************************
@@ -1939,13 +2008,9 @@ display_box_5:
 *
 join_effect:
        .proc
-*      Display map
+*      Refresh screen
        bl   @vsync
-       bl   @upload_map
-       bl   @update_vdp_regs
-       bl   @vsync
-       bl   @upload_map
-       bl   @update_vdp_regs
+       bl   @set_vdp_regs
 *      Initialize sprite positions
        li   r3,buffer
        li   r2,4
@@ -2434,18 +2499,23 @@ txt_game_over:
        text "GAME OVER"
        byte 0
 txt_percentage:
-       text "PERCENTAGE"
+       text "PERCENTAGE: 00%"
        byte 0
 txt_threshold:
-       text "THRESHOLD"
+       text "THRESHOLD:  75%"
        byte 0
 txt_bonus:
-       text "BONUS"
-       byte 0
-txt_x:
-       text "X"
+       text "BONUS 00 X 1000"
        byte 0
        even
+d10000:
+       data 10000
+d1000:
+       data 1000
+d100:
+       data 100
+d10:
+       data 10
 b_black:
        byte black
 b_white:
@@ -2468,7 +2538,7 @@ top:
 
 * 3rd top row without red time line
 no_time_line:
-       DATA >8080,>E8E9,>E9E9,>E9EA    ;
+       DATA >80E8,>E9E9,>E9E9,>EA80    ;
        DATA >8080,>8080,>8080,>8080    ;
        DATA >8080,>8080,>8080,>8080    ;
        DATA >8080,>8080,>8080,>80EB    ;

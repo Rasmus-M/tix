@@ -1,18 +1,15 @@
-****************************************
-* Map Data
-****************************************
 * -- Map Row 0 --
-       DATA >80BB,>BCBD,>BEBF,>C0C1    ;
-       DATA >8080,>8080,>80A3,>ACA1    ;
-       DATA >A9AD,>A5A4,>8080,>8080    ;
-       DATA >80CC,>CCCC,>CCCC,>80E3    ;
+       DATA >BBBC,>BDBE,>BFC0,>C180    ;
+       DATA >8080,>8080,>A3AC,>A1A9    ;
+       DATA >ADA5,>A480,>8080,>8080    ;
+       DATA >CCCC,>CCCC,>CCCC,>80E3    ;
 * -- Map Row 1 --                       
-       DATA >80C6,>C7BD,>C8C9,>CACB    ;
-       DATA >8080,>8080,>8090,>9085    ;
-       DATA >8097,>9585,>8080,>8080    ;
-       DATA >80D6,>D6D6,>D6D6,>80E1    ;
+       DATA >C6C7,>BDC8,>C9CA,>CB80    ;
+       DATA >8080,>8080,>9090,>8580    ;
+       DATA >9795,>8580,>8080,>8080    ;
+       DATA >D6D6,>D6D6,>D6D6,>80E1    ;
 * -- Map Row 2 --                       
-       DATA >C2C2,>C3C4,>C4C4,>C4C5    ;
+       DATA >C2C3,>C4C4,>C4C4,>C5C2    ;
        DATA >C2C2,>C2C2,>C2C2,>C2C2    ;
        DATA >C2C2,>C2C2,>C2C2,>C2C2    ;
        DATA >C2C2,>C2C2,>C2C2,>C2E2    ;
