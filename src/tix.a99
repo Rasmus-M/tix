@@ -107,10 +107,10 @@ lives:
        equ  padvar+2
 status:
        equ  lives+2
-score:
+score_lsw:
        equ  status+2
 score_msw:
-       equ  score+2
+       equ  score_lsw+2
 old_score:
        equ  score_msw+2
 area:
@@ -298,7 +298,8 @@ init_game:
        clr  @name_table_flag
        li   r0,n_lives
        mov  r0,@lives
-       clr  @score
+       clr  @score_lsw
+       clr  @score_msw
        seto @old_score
        clr  @level
 *      Top panel
@@ -662,7 +663,7 @@ plot_trail_2:
        jeq  plot_trail_3
        sla  r0,1
 plot_trail_3:
-       a    r0,@score
+       bl   @add_score
        clr  @trail_pointer
        clr  @fuse_trail_pointer
        clr  @fuse_active
@@ -1237,13 +1238,21 @@ upload_map_2
 *
 display_score:
        .proc
-       c    @score,@old_score
+       c    @score_lsw,@old_score
        jeq  display_score_1
-       li   r0,25
-       mov  @score,r1
-       li   r2,5
+       mov  @score_msw,r0
+       mov  @score_lsw,r1
+       div  @d10000,r0
+       mov  r1,r8
+       mov  r0,r1
+       li   r0,24
+       li   r2,2
        bl   @display_tall_decimal
-       mov  @score,@old_score
+       mov  r8,r1
+       li   r0,26
+       li   r2,4
+       bl   @display_tall_decimal
+       mov  @score_lsw,@old_score
 display_score_1:
        .endproc
 *// display_score
@@ -1384,11 +1393,11 @@ level_completed:
        li   r2,2
        bl   @display_decimal
 *      Bonus points
-       mov  @area_percent,r1
-       s    @area_required_percent,r1
-       mpy  @d1000,r1
-       mov  r2,r1
-       a    r1,@score
+       mov  @area_percent,r0
+       s    @area_required_percent,r0
+       mpy  @d1000,r0
+       mov  r1,r0
+       bl   @add_score
        li   r2,5
        li   r0,15*32+14
        bl   @display_decimal
@@ -1722,6 +1731,20 @@ map_address:
        ai   r0,map
        rt
 *// map_address
+
+*********************************************************************
+*
+* Add to score
+*
+* r0: Points to add
+*
+add_score:
+       a    r0,@score_lsw
+       jnc  add_score_1
+       inc  @score_msw
+add_score_1:
+       rt
+*// add_score
 
 *********************************************************************
 *
