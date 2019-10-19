@@ -127,8 +127,10 @@ time:
        equ  area_required_percent+2
 displayed_time:
        equ  time+2
-level:
+time_out:
        equ  displayed_time+2
+level:
+       equ  time_out+2
 y:
        equ  level+2
 x:
@@ -187,8 +189,10 @@ tix_addr:
        equ  tix_tail_pointer+2
 tix_char:
        equ  tix_addr+2
-spark_1_y:
+n_sparks:
        equ  tix_char+2
+spark_1_y:
+       equ  n_sparks+2
 spark_1_x:
        equ  spark_1_y+2
 spark_1_dy:
@@ -203,8 +207,24 @@ spark_2_dy:
        equ  spark_2_x+2
 spark_2_dx:
        equ  spark_2_dy+2
-fuse_y:
+spark_3_y:
        equ  spark_2_dx+2
+spark_3_x:
+       equ  spark_3_y+2
+spark_3_dy:
+       equ  spark_3_x+2
+spark_3_dx:
+       equ  spark_3_dy+2
+spark_4_y:
+       equ  spark_3_dx+2
+spark_4_x:
+       equ  spark_4_y+2
+spark_4_dy:
+       equ  spark_4_x+2
+spark_4_dx:
+       equ  spark_4_dy+2
+fuse_y:
+       equ  spark_4_dx+2
 fuse_x:
        equ  fuse_y+2
 fuse_dy:
@@ -384,15 +404,20 @@ resume_level_1:
        clr  @trail_pointer
 resume_level_2:
 *      Sparks
+       li   r0,4
+       mov  r0,@n_sparks
        li   r0,spark_init
        li   r1,spark_1_y
-       li   r2,16
+       li   r2,32
        bl   @copy
 *      Screen
        bl   @refresh_screen
        .endproc
 spark_init:
-       data 76,4,-1,0,76,252,1,0
+       data (map_height_pixels/2)+4,4,1,0
+       data (map_height_pixels/2)+4,map_width_pixels-4,-1,0
+       data 4,(map_width_pixels/2)+4,0,-1
+       data map_height_pixels-4,(map_width_pixels/2)+4,0,1
 *// resume_level
 
 *********************************************************************
@@ -789,7 +814,7 @@ move_tix_4:
 *
 update_sparks:
        .proc
-       li   r2,2
+       mov  @n_sparks,r2
        li   r3,spark_1_y               ; Ptr y
        mov  r3,r4                      ; Ptr y
        ai   r4,4                       ; Ptr dy
@@ -970,6 +995,15 @@ update_sparks_15:
        jeq  update_sparks_16
        b    @update_sparks_1
 update_sparks_16:
+*      Create more sparks
+       abs  @time_out
+       jeq  update_sparks_17
+       clr  @time_out
+       mov  @n_sparks,r0
+       ci   r0,4
+       jeq  update_sparks_17
+       inc  @n_sparks
+update_sparks_17:
        .endproc
 *// update_sparks
 
@@ -1093,7 +1127,7 @@ upload_sprites_4:
 *      Sparks
        li   r3,spark_1_y
        li   r4,>200b
-       li   r5,2
+       mov  @n_sparks,r5
 upload_sprites_5:
        bl   @upload_sprite
        ai   r3,4                       ; Skip dy/dx
@@ -1344,6 +1378,9 @@ display_time_line_1:
        inc  r1
 display_time_line_2:
        movb *r1,*r15
+       mov  @time,r0
+       jeq  display_time_line_3
+       seto @time_out
 display_time_line_3:
        .endproc
 *// display_time
@@ -2060,10 +2097,10 @@ join_effect_2:
 *      Upload sprites
        li   r0,spratb
        bl   @vwad
-       li   r4,>000d
        li   r3,buffer
        li   r5,4
 join_effect_3:
+       li   r4,>000d
        bl   @upload_sprite_simple
        dec  r5
        jne  join_effect_3
@@ -2110,10 +2147,10 @@ split_effect_2:
 *      Upload sprites
        li   r0,spratb
        bl   @vwad
-       li   r4,>000d
        li   r3,buffer
        li   r5,4
 split_effect_3:
+       li   r4,>000d
        bl   @upload_sprite_simple
        dec  r5
        jne  split_effect_3
