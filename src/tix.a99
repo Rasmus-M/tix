@@ -404,7 +404,7 @@ resume_level_1:
        clr  @trail_pointer
 resume_level_2:
 *      Sparks
-       li   r0,4
+       li   r0,2
        mov  r0,@n_sparks
        li   r0,spark_init
        li   r1,spark_1_y
