@@ -306,6 +306,24 @@ die:
 *
 intro:
        .proc
+       li   r3,20
+       bl   @init_map_with_height
+       li   r0,3*inner_map_size/4
+       mov  r0,@area_required
+       bl   @refresh_screen
+       li   r0,texts_marker
+       bl   @display_texts
+       li   r0,15*8+4
+       mov  r0,@x
+       li   r0,19*8+4
+       mov  r0,@y
+
+       bl   @upload_sprites
+
+
+
+       seto r2
+       bl   @wait_fire
        .endproc
 *// intro
 
@@ -322,15 +340,6 @@ init_game:
        clr  @score_msw
        seto @old_score
        clr  @level
-*      Top panel
-       li   r0,namet1
-       li   r1,top
-       li   r2,top_height/8*32
-       bl   @vmbw
-       li   r0,namet2
-       li   r1,top
-       li   r2,top_height/8*32
-       bl   @vmbw
        .endproc
 *// init_game
 
@@ -1128,6 +1137,7 @@ upload_sprites_4:
        li   r3,spark_1_y
        li   r4,>200b
        mov  @n_sparks,r5
+       jeq  upload_sprites_6
 upload_sprites_5:
        bl   @upload_sprite
        ai   r3,4                       ; Skip dy/dx
@@ -1404,26 +1414,19 @@ level_completed:
        li   r1,32
        li   r2,21
        bl   @display_box
+       li   r0,texts_result
+       bl   @display_texts
 *      Area claimed
-       li   r0,9*32+9
-       li   r1,txt_percentage
-       bl   @display_text
        li   r0,9*32+21
        mov  @area_percent,r1
        li   r2,2
        bl   @display_decimal
 *      Area required
-       li   r0,11*32+9
-       li   r1,txt_threshold
-       bl   @display_text
        li   r0,11*32+21
        mov  @area_required_percent,r1
        li   r2,2
        bl   @display_decimal
 *      Bonus
-       li   r0,13*32+9
-       li   r1,txt_bonus
-       bl   @display_text
        li   r0,13*32+15
        mov  @area_percent,r1
        s    @area_required_percent,r1
@@ -1540,11 +1543,14 @@ fill_area_3:
 * Init map
 *
 init_map:
+       li   r3,map_height
+init_map_with_height:
        .proc
        li   r0,map
        li   r2,map_size
        bl   @clear
        li   r0,white*256
+       dect r3
 *      Top
        li   r1,map
        li   r2,map_width
@@ -1552,27 +1558,26 @@ init_map_1:
        movb r0,*r1+
        dec  r2
        jne  init_map_1
-*      Bottom
-       li   r1,map+((map_height-1)*map_width)
-       li   r2,map_width
+*      Right
+       li   r1,map+map_width+(map_width-1)
+       mov  r3,r2
 init_map_2:
-       movb r0,*r1+
+       movb r0,*r1
+       ai   r1,map_width
        dec  r2
        jne  init_map_2
 *      Left
-       li   r1,map
-       li   r2,map_height
+       li   r1,map+map_width
+       mov  r3,r2
 init_map_3:
        movb r0,*r1
        ai   r1,map_width
        dec  r2
        jne  init_map_3
-*      Right
-       li   r1,map+(map_width-1)
-       li   r2,map_height
+*      Bottom
+       li   r2,map_width
 init_map_4:
-       movb r0,*r1
-       ai   r1,map_width
+       movb r0,*r1+
        dec  r2
        jne  init_map_4
        .endproc
@@ -1960,6 +1965,26 @@ bin_to_dec_1:
 *
 * Display text
 *
+* r0: Points to list of strings to display (list of offset, string pointer)
+* terminated by -1.
+*
+display_texts:
+       .proc
+       mov  r0,r5
+display_texts_1:
+       mov  *r5+,r0
+       jlt  display_texts_2
+       mov  *r5+,r1
+       bl   @display_text
+       jmp  display_texts_1
+display_texts_2:
+       .endproc
+*// display_texts
+
+*********************************************************************
+*
+* Display text
+*
 * r0: Screen offset
 * r1: String to display (0 terminated)
 *
@@ -2233,6 +2258,15 @@ one_time_init_1:
        mov  *r0+,*r1+
        dect r2
        jne  one_time_init_1
+*      Top panel
+       li   r0,namet1
+       li   r1,top
+       li   r2,top_height/8*32
+       bl   @vmbw
+       li   r0,namet2
+       li   r1,top
+       li   r2,top_height/8*32
+       bl   @vmbw
        .endproc
 *// one_time_init
 
@@ -2558,8 +2592,47 @@ wait_1:
 
 *********************************************************************
 *
+* Wait fire
+*
+* r2: number of frames
+*
+wait_fire:
+       .proc
+wait_fire_1:
+       bl   @vsync
+       li   r0,JOY_FI
+       bl   @check_key
+       jne  wait_fire_2
+       dec  r2
+       jne  wait_fire_1
+wait_fire_2:
+       .endproc
+*// wait
+
+*********************************************************************
+*
 * Data
 *
+texts_marker:
+       data 15*32+10,txt_your_marker
+       data 17*32+8,txt_controlled_with
+       data 18*32+12,txt_joystick
+       data -1
+texts_result:
+       data 9*32+9,txt_percentage
+       data 11*32+9,txt_threshold
+       data 13*32+9,txt_bonus
+       data -1
+
+txt_your_marker:
+       text "YOUR MARKER"
+       byte 0
+txt_controlled_with:
+       text "CONTROLLED WITH"
+       byte 0
+txt_joystick:
+       text "JOYSTICK"
+       byte 0
 txt_game_over:
        text "GAME OVER"
        byte 0
