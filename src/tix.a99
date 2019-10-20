@@ -310,9 +310,7 @@ intro:
        li   r0,3*inner_map_size/4      ; 75%
        mov  r0,@area_required
 *      Screen 1
-       li   r3,20
-       bl   @init_map_with_height
-       bl   @refresh_screen
+       bl   @intro_screen
        li   r0,texts_marker
        bl   @display_texts
        li   r0,15*8+4
@@ -323,17 +321,30 @@ intro:
        li   r2,120
        bl   @wait_fire
 *      Screen2
-       li   r3,20
-       bl   @init_map_with_height
-       bl   @refresh_screen
+       bl   @intro_screen
        li   r0,intro_path_1
        bl   @play_path
-
+       li   r0,intro_path_2
+       bl   @play_path
 *      Pause
        seto r2
        bl   @wait_fire
        .endproc
 *// intro
+
+*********************************************************************
+*
+* Intro screen
+*
+intro_screen:
+       .proc
+       li   r3,20
+       bl   @init_map_with_height
+       bl   @refresh_screen
+       li   r0,texts_created
+       bl   @display_texts
+       .endproc
+*// intro_screen
 
 *********************************************************************
 *
@@ -395,7 +406,7 @@ auto_user_input:
        mov  *r13+,r3                   ; dy
        mov  *r13,r4                    ; Fire
        jeq  auto_user_input_0
-       seto @slow
+       clr  @slow
 auto_user_input_0:
        ai   r13,-4
        mov  r2,@dx
@@ -2730,6 +2741,10 @@ wait_fire_2:
 *
 * Data
 *
+texts_created:
+       data 5*32+7,txt_created_2019
+       data 6*32+8,txt_rasmus_moustgaard
+       data -1
 texts_marker:
        data 15*32+10,txt_your_marker
        data 17*32+8,txt_controlled_with
@@ -2740,6 +2755,14 @@ texts_result:
        data 11*32+9,txt_threshold
        data 13*32+9,txt_bonus
        data -1
+
+txt_created_2019:
+       text "CREATED 2019 BY"
+       byte 0
+txt_rasmus_moustgaard:
+       text "RASMUS MOUSTGAARD"
+       byte 0
+
 
 txt_your_marker:
        text "YOUR MARKER"
@@ -2768,6 +2791,13 @@ txt_bonus:
 *      count,dx,dy,fire
 intro_path_1:
        data 4,19
+       data 4,0,-1,1
+       data 4,1,0,1
+       data 4,0,1,1
+       data 1,0,0,1
+       data -1
+intro_path_2:
+       data 14,19
        data 4,0,-1,0
        data 4,1,0,0
        data 4,0,1,0
