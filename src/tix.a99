@@ -155,10 +155,8 @@ last_safe_y:
        equ  dx_old+2
 last_safe_x:
        equ  last_safe_y+2
-fire:
-       equ  last_safe_x+2
 slow:
-       equ  fire+2
+       equ  last_safe_x+2
 char_aligned:
        equ  slow+2
 trail_pointer:
@@ -167,8 +165,10 @@ inactivity_time:
        equ  trail_pointer+2
 scroll_y:
        equ  inactivity_time+2
-name_table_flag:
+scroll_enabled:
        equ  scroll_y+2
+name_table_flag:
+       equ  scroll_enabled+2
 vdp_status:
        equ  name_table_flag+2
 tix_x:                                 ; FP 12.4
@@ -306,10 +306,12 @@ die:
 *
 intro:
        .proc
+       clr  @scroll_enabled
+       li   r0,3*inner_map_size/4      ; 75%
+       mov  r0,@area_required
+*      Screen 1
        li   r3,20
        bl   @init_map_with_height
-       li   r0,3*inner_map_size/4
-       mov  r0,@area_required
        bl   @refresh_screen
        li   r0,texts_marker
        bl   @display_texts
@@ -317,11 +319,17 @@ intro:
        mov  r0,@x
        li   r0,19*8+4
        mov  r0,@y
-
        bl   @upload_sprites
+       li   r2,120
+       bl   @wait_fire
+*      Screen2
+       li   r3,20
+       bl   @init_map_with_height
+       bl   @refresh_screen
+       li   r0,intro_path_1
+       bl   @play_path
 
-
-
+*      Pause
        seto r2
        bl   @wait_fire
        .endproc
@@ -329,10 +337,102 @@ intro:
 
 *********************************************************************
 *
+* Play path
+*
+* r0: Path to play
+*
+play_path:
+       .proc
+       mov  r0,r13
+       mov  *r13+,r0
+       sla  r0,3
+       ai   r0,4
+       mov  r0,@x
+       mov  *r13+,r1
+       sla  r1,3
+       ai   r1,4
+       mov  r1,@y
+       mov  *r13+,r14
+       clr  @status
+       bl   @intro_game_loop
+       bl   @refresh_screen
+       .endproc
+*// play_path
+
+*********************************************************************
+*
+* Intro game loop
+*
+intro_game_loop:
+       .proc
+intro_game_loop_1:
+       bl   @vsync
+       bl   @set_vdp_regs
+       bl   @check_alignment
+       bl   @auto_user_input
+       bl   @move_player
+       bl   @plot_trail
+;       bl   @move_tix
+;       bl   @update_sparks
+;       bl   @update_fuse
+       bl   @upload_sprites
+       bl   @upload_map
+       inc  @time
+       mov  @status,r0
+       jeq  intro_game_loop_1
+       .endproc
+*// intro_game_loop
+
+*********************************************************************
+*
+* Automatic user input (for intro)
+*
+auto_user_input:
+       .proc
+       mov  @char_aligned,r0
+       jeq  auto_user_input_4
+       mov  *r13+,r2                   ; dx
+       mov  *r13+,r3                   ; dy
+       mov  *r13,r4                    ; Fire
+       jeq  auto_user_input_0
+       seto @slow
+auto_user_input_0:
+       ai   r13,-4
+       mov  r2,@dx
+       mov  r3,@dy
+       mov  r2,r0
+       jne  auto_user_input_1
+       mov  r3,r0
+       jeq  auto_user_input_2
+auto_user_input_1:
+       mov  r2,@dx_old
+       mov  r3,@dy_old
+auto_user_input_2:
+       abs  r4
+       jeq  auto_user_input_3
+       sla  r2,1
+       sla  r3,1
+auto_user_input_3:
+       mov  r2,@vx
+       mov  r3,@vy
+*      Update auto counter
+       dec  r14
+       jne  auto_user_input_4
+       ai   r13,6
+       mov  *r13+,r14                  ; New counter
+       jgt  auto_user_input_4
+       seto @status
+auto_user_input_4:
+       .endproc
+*// auto_user_input
+
+*********************************************************************
+*
 * Init game
 *
 init_game:
        .proc
+       seto @scroll_enabled
        clr  @name_table_flag
        li   r0,n_lives
        mov  r0,@lives
@@ -438,6 +538,7 @@ game_loop:
 game_loop_1:
        bl   @vsync
        bl   @set_vdp_regs
+       bl   @check_alignment
        bl   @user_input
        bl   @move_player
        bl   @plot_trail
@@ -486,28 +587,41 @@ set_vdp_regs:
 
 *********************************************************************
 *
+* Check aligment to 8 pixel grid
+*
+check_alignment:
+       mov  @x,r0
+       andi r0,7
+       ci   r0,4
+       jne  check_alignment_1
+       mov  @y,r1
+       andi r1,7
+       ci   r1,4
+       jne  check_alignment_1
+       seto @char_aligned
+       jmp  check_alignment_2
+check_alignment_1:
+       clr  @char_aligned
+check_alignment_2:
+       rt
+*// check_alignment
+
+*********************************************************************
+*
 * Read user input
 *
 user_input:
        .proc
-       clr  @char_aligned
-       mov  @x,r0
-       andi r0,7
-       ci   r0,4
-       jne  user_input_9
-       mov  @y,r1
-       andi r1,7
-       ci   r1,4
-       jne  user_input_9
-       seto @char_aligned
-       clr  @fire
-       clr  r2
-       clr  r3
+       mov  @char_aligned,r0
+       jeq  user_input_9
+       clr  r2                         ; dx
+       clr  r3                         ; dy
+       clr  r4                         ; Fire
        li   r0,JOY_FI
        bl   @check_key
 *      Fire
        jeq  user_input_1
-       seto @fire
+       seto r4
        clr  @slow
 user_input_1:
 *      Left
@@ -543,7 +657,7 @@ user_input_6:
        mov  r2,@dx_old
        mov  r3,@dy_old
 user_input_7:
-       abs  @fire
+       abs  r4
        jeq  user_input_8
        sla  r2,1
        sla  r3,1
@@ -627,6 +741,8 @@ move_player_5:
        mov  r0,@y
 *      Scroll
 move_player_6:
+       abs  @scroll_enabled
+       jeq  move_player_10
        mov  @y,r0
        ci   r0,middle_y
        jhe  move_player_7
@@ -642,6 +758,7 @@ move_player_8:
        ai   r0,-middle_y
 move_player_9:
        mov  r0,@scroll_y
+*      Inactivity
 move_player_10:
        c    @x,@x_old
        jne  move_player_11
@@ -2646,6 +2763,17 @@ txt_bonus:
        text "BONUS 00 X 1000"
        byte 0
        even
+
+*      start_x, start_y
+*      count,dx,dy,fire
+intro_path_1:
+       data 4,19
+       data 4,0,-1,0
+       data 4,1,0,0
+       data 4,0,1,0
+       data 1,0,0,0
+       data -1
+
 d10000:
        data 10000
 d1000:
