@@ -7,41 +7,35 @@ intro:
        clr  @scroll_enabled
        li   r0,3*inner_map_size/4      ; 75%
        mov  r0,@area_required
+*      Screen 0
+       bl   @intro_screen
+       li   r0,texts_intro_0
+       mov  r0,@intro_texts_addr
+       li   r0,intro_path_0
+       bl   @play_path
 *      Screen 1
        bl   @intro_screen
-       li   r0,callback_screen_1
-       mov  r0,@intro_callback_addr
+       li   r0,texts_intro_1
+       mov  r0,@intro_texts_addr
        li   r0,intro_path_1
        bl   @play_path
-*      Screen2
+*      Screen 2
        bl   @intro_screen
-       li   r0,callback_screen_2
-       mov  r0,@intro_callback_addr
+       li   r0,texts_intro_2a
+       mov  r0,@intro_texts_addr
        li   r0,intro_path_2a
        bl   @play_path
+       li   r0,texts_intro_2b
+       mov  r0,@intro_texts_addr
        li   r0,intro_path_2b
        bl   @play_path
+*      Screen X
+       bl   @intro_screen
 *      Pause
        seto r2
        bl   @wait_fire
        .endproc
 *// intro
-
-*********************************************************************
-*
-* Intro callbacks
-*
-callback_screen_1:
-       .proc
-       li   r0,texts_marker
-       bl   @display_overlay_texts
-       .endproc
-callback_screen_2:
-       .proc
-       li   r0,texts_created
-       bl   @display_overlay_texts
-       .endproc
-*// callbacks
 
 *********************************************************************
 *
@@ -97,9 +91,9 @@ intro_game_loop_1:
        ;       bl   @update_fuse
        bl   @upload_sprites
        bl   @upload_map
-       mov  @intro_callback_addr,r0
+       mov  @intro_texts_addr,r0
        jeq  intro_game_loop_2
-       bl   *r0                        ; Callback
+       bl   @display_overlay_texts
 intro_game_loop_2:
        inc  @time
        mov  @status,r0
@@ -199,7 +193,7 @@ display_overlay_text_2:
 *
 * Data
 *
-intro_callback_addr:
+intro_texts_addr:
        data 0
 
 txt_created_2019:
@@ -217,36 +211,62 @@ txt_controlled_with:
 txt_joystick:
        text "JOYSTICK"
        byte 0
+txt_claim_areas:
+       text "CLAIM AREAS"
+       byte 0
+txt_by_joining_walls:
+       text "BY JOINING WALLS"
+       byte 0
+txt_with_stix:
+       text "WITH STIX"
+       byte 0
+txt_press_fire:
+       text "PRESS FIRE"
+       byte 0
+txt_to_move_faster:
+       text "TO MOVE FASTER"
+       byte 0
 
-texts_marker:
+texts_intro_0:
        data 5*32+8,txt_created_2019
        data 6*32+7,txt_rasmus_moustgaard
+       data -1
+texts_intro_1:
        data 15*32+10,txt_your_marker
        data 17*32+8,txt_controlled_with
        data 18*32+12,txt_joystick
        data -1
-texts_created:
-       data 5*32+8,txt_created_2019
-       data 6*32+7,txt_rasmus_moustgaard
+texts_intro_2a:
+       data 9*32+10,txt_claim_areas
+       data 10*32+7,txt_by_joining_walls
+       data 11*32+11,txt_with_stix
+       data -1
+texts_intro_2b:
+       data 10*32+11,txt_press_fire
+       data 11*32+9,txt_to_move_faster
        data -1
 
 *      start_x, start_y
 *      count,dx,dy,fire
+intro_path_0:
+       data 0,32
+       data 120,0,0,1
+       data -1
 intro_path_1:
        data 15,19
-       data 60,0,0,1
+       data 120,0,0,1
        data -1
 intro_path_2a:
        data 5,19
-       data 6,0,-1,1
-       data 6,1,0,1
-       data 6,0,1,1
-       data 9,1,0,1
-       data -1
-intro_path_2b:
-       data 20,19
        data 6,0,-1,0
        data 6,1,0,0
        data 6,0,1,0
-       data 60,0,0,0
+       data 9,1,0,0
+       data -1
+intro_path_2b:
+       data 20,19
+       data 6,0,-1,1
+       data 6,1,0,1
+       data 6,0,1,1
+       data 60,0,0,1
        data -1
