@@ -122,16 +122,16 @@ auto_user_input:
        clr  @slow
 auto_user_input_0:
        ai   r13,-4
-       mov  r2,@dx
-       mov  r3,@dy
        mov  r2,r0
        jne  auto_user_input_1
        mov  r3,r0
        jeq  auto_user_input_2
 auto_user_input_1:
-       mov  r2,@dx_old
-       mov  r3,@dy_old
+       mov  @dx,@dx_old
+       mov  @dy,@dy_old
 auto_user_input_2:
+       mov  r2,@dx
+       mov  r3,@dy
        abs  r4
        jeq  auto_user_input_3
        sla  r2,1
@@ -194,3 +194,59 @@ display_overlay_text_1:
 display_overlay_text_2:
        .endproc
 *// display_overlay_text
+
+*********************************************************************
+*
+* Data
+*
+intro_callback_addr:
+       data 0
+
+txt_created_2019:
+       text "CREATED 2019 BY"
+       byte 0
+txt_rasmus_moustgaard:
+       text "RASMUS MOUSTGAARD"
+       byte 0
+txt_your_marker:
+       text "YOUR MARKER"
+       byte 0
+txt_controlled_with:
+       text "CONTROLLED WITH"
+       byte 0
+txt_joystick:
+       text "JOYSTICK"
+       byte 0
+
+texts_marker:
+       data 5*32+8,txt_created_2019
+       data 6*32+7,txt_rasmus_moustgaard
+       data 15*32+10,txt_your_marker
+       data 17*32+8,txt_controlled_with
+       data 18*32+12,txt_joystick
+       data -1
+texts_created:
+       data 5*32+8,txt_created_2019
+       data 6*32+7,txt_rasmus_moustgaard
+       data -1
+
+*      start_x, start_y
+*      count,dx,dy,fire
+intro_path_1:
+       data 15,19
+       data 60,0,0,1
+       data -1
+intro_path_2a:
+       data 5,19
+       data 6,0,-1,1
+       data 6,1,0,1
+       data 6,0,1,1
+       data 9,1,0,1
+       data -1
+intro_path_2b:
+       data 20,19
+       data 6,0,-1,0
+       data 6,1,0,0
+       data 6,0,1,0
+       data 60,0,0,0
+       data -1
