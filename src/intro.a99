@@ -1,0 +1,196 @@
+*********************************************************************
+*
+* Show intro
+*
+intro:
+       .proc
+       clr  @scroll_enabled
+       li   r0,3*inner_map_size/4      ; 75%
+       mov  r0,@area_required
+*      Screen 1
+       bl   @intro_screen
+       li   r0,callback_screen_1
+       mov  r0,@intro_callback_addr
+       li   r0,intro_path_1
+       bl   @play_path
+*      Screen2
+       bl   @intro_screen
+       li   r0,callback_screen_2
+       mov  r0,@intro_callback_addr
+       li   r0,intro_path_2a
+       bl   @play_path
+       li   r0,intro_path_2b
+       bl   @play_path
+*      Pause
+       seto r2
+       bl   @wait_fire
+       .endproc
+*// intro
+
+*********************************************************************
+*
+* Intro callbacks
+*
+callback_screen_1:
+       .proc
+       li   r0,texts_marker
+       bl   @display_overlay_texts
+       .endproc
+callback_screen_2:
+       .proc
+       li   r0,texts_created
+       bl   @display_overlay_texts
+       .endproc
+*// callbacks
+
+*********************************************************************
+*
+* Intro screen
+*
+intro_screen:
+       .proc
+       li   r3,20
+       bl   @init_map_with_height
+       bl   @refresh_screen
+       .endproc
+*// intro_screen
+
+*********************************************************************
+*
+* Play path
+*
+* r0: Path to play
+*
+play_path:
+       .proc
+       mov  r0,r13
+       mov  *r13+,r0
+       sla  r0,3
+       ai   r0,4
+       mov  r0,@x
+       mov  *r13+,r1
+       sla  r1,3
+       ai   r1,4
+       mov  r1,@y
+       mov  *r13+,r14
+       clr  @status
+       bl   @intro_game_loop
+       bl   @refresh_screen
+       .endproc
+*// play_path
+
+*********************************************************************
+*
+* Intro game loop
+*
+intro_game_loop:
+       .proc
+intro_game_loop_1:
+       bl   @vsync
+       bl   @set_vdp_regs
+       bl   @check_alignment
+       bl   @auto_user_input
+       bl   @move_player
+       bl   @plot_trail
+       ;       bl   @move_tix
+       ;       bl   @update_sparks
+       ;       bl   @update_fuse
+       bl   @upload_sprites
+       bl   @upload_map
+       mov  @intro_callback_addr,r0
+       jeq  intro_game_loop_2
+       bl   *r0                        ; Callback
+intro_game_loop_2:
+       inc  @time
+       mov  @status,r0
+       jeq  intro_game_loop_1
+       .endproc
+*// intro_game_loop
+
+*********************************************************************
+*
+* Automatic user input (for intro)
+*
+auto_user_input:
+       .proc
+       mov  @char_aligned,r0
+       jeq  auto_user_input_4
+       mov  *r13+,r2                   ; dx
+       mov  *r13+,r3                   ; dy
+       mov  *r13,r4                    ; Fire
+       jeq  auto_user_input_0
+       clr  @slow
+auto_user_input_0:
+       ai   r13,-4
+       mov  r2,@dx
+       mov  r3,@dy
+       mov  r2,r0
+       jne  auto_user_input_1
+       mov  r3,r0
+       jeq  auto_user_input_2
+auto_user_input_1:
+       mov  r2,@dx_old
+       mov  r3,@dy_old
+auto_user_input_2:
+       abs  r4
+       jeq  auto_user_input_3
+       sla  r2,1
+       sla  r3,1
+auto_user_input_3:
+       mov  r2,@vx
+       mov  r3,@vy
+*      Update auto counter
+       dec  r14
+       jne  auto_user_input_4
+       ai   r13,6
+       mov  *r13+,r14                  ; New counter
+       jgt  auto_user_input_4
+       seto @status
+auto_user_input_4:
+       .endproc
+*// auto_user_input
+
+*********************************************************************
+*
+* Display overlay texts
+*
+* r0: Points to list of strings to display (list of offset, string pointer)
+* terminated by -1.
+*
+display_overlay_texts:
+       .proc
+       mov  r0,r5
+display_overlay_texts_1:
+       mov  *r5+,r0
+       jlt  display_overlay_texts_2
+       mov  *r5+,r1
+       bl   @display_overlay_text
+       jmp  display_overlay_texts_1
+display_overlay_texts_2:
+       .endproc
+*// display_overlay_texts
+
+*********************************************************************
+*
+* Display text on top of the map
+*
+* r0: Screen offset
+* r1: String to display (0 terminated)
+*
+display_overlay_text:
+       .proc
+       mov  @name_table_flag,r2
+       andi r2,>0001
+       sla  r2,10
+       a    r2,r0
+       ai   r0,namet1
+       bl   @vwad
+display_overlay_text_1:
+       movb *r1+,r2
+       jeq  display_overlay_text_2
+       ai   r2,(chr_space-32)*256
+       movb r2,*r15
+       jmp  display_overlay_text_1
+display_overlay_text_2:
+       .endproc
+*// display_overlay_text

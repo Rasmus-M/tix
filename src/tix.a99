@@ -279,7 +279,7 @@ main:
        li   r10,stack                  ; Setup stack pointer
        bl   @one_time_init
 new_game:
-       bl   @intro
+;       bl   @intro
        bl   @init_game
 new_level:
        bl   @init_level
@@ -299,143 +299,6 @@ die:
        bl   @game_over
        jmp  new_game
 *// main
-
-*********************************************************************
-*
-* Show intro
-*
-intro:
-       .proc
-       clr  @scroll_enabled
-       li   r0,3*inner_map_size/4      ; 75%
-       mov  r0,@area_required
-*      Screen 1
-       bl   @intro_screen
-       li   r0,texts_marker
-       bl   @display_texts
-       li   r0,15*8+4
-       mov  r0,@x
-       li   r0,19*8+4
-       mov  r0,@y
-       bl   @upload_sprites
-       li   r2,120
-       bl   @wait_fire
-*      Screen2
-       bl   @intro_screen
-       li   r0,intro_path_1
-       bl   @play_path
-       li   r0,intro_path_2
-       bl   @play_path
-*      Pause
-       seto r2
-       bl   @wait_fire
-       .endproc
-*// intro
-
-*********************************************************************
-*
-* Intro screen
-*
-intro_screen:
-       .proc
-       li   r3,20
-       bl   @init_map_with_height
-       bl   @refresh_screen
-       li   r0,texts_created
-       bl   @display_texts
-       .endproc
-*// intro_screen
-
-*********************************************************************
-*
-* Play path
-*
-* r0: Path to play
-*
-play_path:
-       .proc
-       mov  r0,r13
-       mov  *r13+,r0
-       sla  r0,3
-       ai   r0,4
-       mov  r0,@x
-       mov  *r13+,r1
-       sla  r1,3
-       ai   r1,4
-       mov  r1,@y
-       mov  *r13+,r14
-       clr  @status
-       bl   @intro_game_loop
-       bl   @refresh_screen
-       .endproc
-*// play_path
-
-*********************************************************************
-*
-* Intro game loop
-*
-intro_game_loop:
-       .proc
-intro_game_loop_1:
-       bl   @vsync
-       bl   @set_vdp_regs
-       bl   @check_alignment
-       bl   @auto_user_input
-       bl   @move_player
-       bl   @plot_trail
-;       bl   @move_tix
-;       bl   @update_sparks
-;       bl   @update_fuse
-       bl   @upload_sprites
-       bl   @upload_map
-       inc  @time
-       mov  @status,r0
-       jeq  intro_game_loop_1
-       .endproc
-*// intro_game_loop
-
-*********************************************************************
-*
-* Automatic user input (for intro)
-*
-auto_user_input:
-       .proc
-       mov  @char_aligned,r0
-       jeq  auto_user_input_4
-       mov  *r13+,r2                   ; dx
-       mov  *r13+,r3                   ; dy
-       mov  *r13,r4                    ; Fire
-       jeq  auto_user_input_0
-       clr  @slow
-auto_user_input_0:
-       ai   r13,-4
-       mov  r2,@dx
-       mov  r3,@dy
-       mov  r2,r0
-       jne  auto_user_input_1
-       mov  r3,r0
-       jeq  auto_user_input_2
-auto_user_input_1:
-       mov  r2,@dx_old
-       mov  r3,@dy_old
-auto_user_input_2:
-       abs  r4
-       jeq  auto_user_input_3
-       sla  r2,1
-       sla  r3,1
-auto_user_input_3:
-       mov  r2,@vx
-       mov  r3,@vy
-*      Update auto counter
-       dec  r14
-       jne  auto_user_input_4
-       ai   r13,6
-       mov  *r13+,r14                  ; New counter
-       jgt  auto_user_input_4
-       seto @status
-auto_user_input_4:
-       .endproc
-*// auto_user_input
 
 *********************************************************************
 *
@@ -2091,7 +1954,7 @@ bin_to_dec_1:
 
 *********************************************************************
 *
-* Display text
+* Display texts
 *
 * r0: Points to list of strings to display (list of offset, string pointer)
 * terminated by -1.
@@ -2739,16 +2602,27 @@ wait_fire_2:
 
 *********************************************************************
 *
+* Program files
+*
+       copy "intro.a99"
+
+*********************************************************************
+*
 * Data
 *
-texts_created:
+intro_callback_addr:
+       data 0
+
+texts_marker:
        data 5*32+7,txt_created_2019
        data 6*32+8,txt_rasmus_moustgaard
-       data -1
-texts_marker:
        data 15*32+10,txt_your_marker
        data 17*32+8,txt_controlled_with
        data 18*32+12,txt_joystick
+       data -1
+texts_created:
+       data 5*32+7,txt_created_2019
+       data 6*32+8,txt_rasmus_moustgaard
        data -1
 texts_result:
        data 9*32+9,txt_percentage
@@ -2790,18 +2664,22 @@ txt_bonus:
 *      start_x, start_y
 *      count,dx,dy,fire
 intro_path_1:
-       data 4,19
-       data 4,0,-1,1
-       data 4,1,0,1
-       data 4,0,1,1
-       data 1,0,0,1
+       data 15,19
+       data 60,0,0,1
        data -1
-intro_path_2:
-       data 14,19
-       data 4,0,-1,0
-       data 4,1,0,0
-       data 4,0,1,0
-       data 1,0,0,0
+intro_path_2a:
+       data 5,19
+       data 6,0,-1,1
+       data 6,1,0,1
+       data 6,0,1,1
+       data 9,1,0,1
+       data -1
+intro_path_2b:
+       data 20,19
+       data 6,0,-1,0
+       data 6,1,0,0
+       data 6,0,1,0
+       data 60,0,0,0
        data -1
 
 d10000:
