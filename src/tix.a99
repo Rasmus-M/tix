@@ -337,6 +337,26 @@ init_level:
        li   r0,4
        mov  r0,@y
 *      Tix
+       li   r0,196
+       li   r1,132
+       bl   @init_tix
+*      Screen
+       bl   @init_map
+       .endproc
+*// init_level
+
+*********************************************************************
+*
+* Init Tix
+*
+* r0: Tix x
+* r1: Tix y
+*
+init_tix:
+       mov  r0,r4
+       sla  r4,4
+       mov  r1,r5
+       sla  r5,4
        li   r0,tix_tail
        mov  r0,@tix_tail_pointer
        clr  @tix_ax
@@ -347,19 +367,15 @@ init_level:
        mov  r1,@tix_dy
        li   r2,tix_tail_size/4
        li   r3,tix_tail
-       li   r4,196*16
        mov  r4,@tix_x
-       li   r5,132*16
        mov  r5,@tix_y
-init_level_1:
+init_tix_1:
        mov  r5,*r3+
        mov  r4,*r3+
        dec  r2
-       jne  init_level_1
-*      Screen
-       bl   @init_map
-       .endproc
-*// init_level
+       jne  init_tix_1
+       rt
+*// init_tix
 
 *********************************************************************
 *
