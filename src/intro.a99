@@ -44,6 +44,10 @@ intro:
        mov  r0,@intro_texts_addr
        li   r0,intro_path_0
        bl   @play_path
+       li   r0,texts_intro_3c
+       mov  r0,@intro_texts_addr
+       li   r0,intro_path_0
+       bl   @play_path
 *      Screen X
        bl   @intro_screen
 *      Pause
@@ -256,6 +260,15 @@ txt_fast_score:
 txt_fast_score_number:
        text "42"
        byte 0
+txt_claim_more_than:
+       text "CLAIM MORE THAN"
+       byte 0
+txt_75_pct_of_playfield:
+       text "75% OF PLAYFIELD"
+       byte 0
+txt_for_special_bonus:
+       text "FOR SPECIAL BONUS"
+       byte 0
 
 texts_intro_0:
        data 10*32+8,txt_created_2019
@@ -280,6 +293,11 @@ texts_intro_2c:
        data 14*32+7,txt_slow_score_number
        data 13*32+19,txt_fast_score
        data 14*32+23,txt_fast_score_number
+       data -1
+texts_intro_3c:
+       data 10*32+8,txt_claim_more_than
+       data 11*32+8,txt_75_pct_of_playfield
+       data 12*32+7,txt_for_special_bonus
        data -1
 
 *      start_x, start_y
