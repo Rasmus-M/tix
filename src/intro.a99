@@ -7,11 +7,19 @@ intro:
        clr  @scroll_enabled
        li   r0,3*inner_map_size/4      ; 75%
        mov  r0,@area_required
+       clr  @score_lsw
+       clr  @score_msw
+       clr  @old_score
+       clr  @trail_pointer
        li   r0,12
        li   r1,12
        bl   @init_tix
 *      Screen 0
        bl   @intro_screen
+       li   r0,4
+       li   r1,39*8+4
+       li   r2,white*256
+       bl   @plot
        li   r0,texts_intro_0
        mov  r0,@intro_texts_addr
        li   r0,intro_path_0
@@ -31,6 +39,10 @@ intro:
        li   r0,texts_intro_2b
        mov  r0,@intro_texts_addr
        li   r0,intro_path_2b
+       bl   @play_path
+       li   r0,texts_intro_2c
+       mov  r0,@intro_texts_addr
+       li   r0,intro_path_0
        bl   @play_path
 *      Screen X
        bl   @intro_screen
@@ -229,30 +241,51 @@ txt_press_fire:
 txt_to_move_faster:
        text "TO MOVE FASTER"
        byte 0
+txt_scores_based_on_area:
+       text "SCORES BASED ON AREA"
+       byte 0
+txt_slow_score:
+       text "SLOW SCORE"
+       byte 0
+txt_slow_score_number:
+       text "84"
+       byte 0
+txt_fast_score:
+       text "FAST SCORE"
+       byte 0
+txt_fast_score_number:
+       text "42"
+       byte 0
 
 texts_intro_0:
-       data 5*32+8,txt_created_2019
-       data 6*32+7,txt_rasmus_moustgaard
+       data 10*32+8,txt_created_2019
+       data 11*32+7,txt_rasmus_moustgaard
        data -1
 texts_intro_1:
        data 15*32+10,txt_your_marker
        data 17*32+8,txt_controlled_with
-       data 18*32+12,txt_joystick
+       data 18*32+11,txt_joystick
        data -1
 texts_intro_2a:
-       data 9*32+10,txt_claim_areas
-       data 10*32+7,txt_by_joining_walls
-       data 11*32+11,txt_with_stix
+       data 10*32+10,txt_claim_areas
+       data 11*32+7,txt_by_joining_walls
+       data 12*32+11,txt_with_stix
        data -1
 texts_intro_2b:
        data 10*32+11,txt_press_fire
        data 11*32+9,txt_to_move_faster
        data -1
+texts_intro_2c:
+       data 13*32+3,txt_slow_score
+       data 14*32+7,txt_slow_score_number
+       data 13*32+19,txt_fast_score
+       data 14*32+23,txt_fast_score_number
+       data -1
 
 *      start_x, start_y
 *      count,dx,dy,fire
 intro_path_0:
-       data 0,32
+       data 0,39
        data 120,0,0,1
        data -1
 intro_path_1:
