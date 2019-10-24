@@ -4,55 +4,96 @@
 *
 intro:
        .proc
+*      Init variables
        clr  @scroll_enabled
        li   r0,3*inner_map_size/4      ; 75%
        mov  r0,@area_required
+intro_1:
+       clr  @area
        clr  @score_lsw
        clr  @score_msw
-       clr  @old_score
        clr  @trail_pointer
-       li   r0,12
-       li   r1,12
+       clr  @fuse_trail_pointer
+       clr  @fuse_active
+       clr  @inactivity_time
+*      Init tix
+       li   r0,172
+       li   r1,48
        bl   @init_tix
-*      Screen 0
-       bl   @intro_screen
+       clr  @tix_tail_pointer
+*      Sparks
+       li   r0,intro_init_sparks_data
+       bl   @init_sparks
+       clr  @n_sparks
+*      Map
+       li   r3,20
+       bl   @init_map_with_height
+       bl   @refresh_screen
+*      Plot out of view parking area
        li   r0,4
        li   r1,39*8+4
        li   r2,white*256
        bl   @plot
-       li   r0,texts_intro_0
-       mov  r0,@intro_texts_addr
-       li   r0,intro_path_0
-       bl   @play_path
-*      Screen 1
-       bl   @intro_screen
+*      Created by
        li   r0,texts_intro_1
        mov  r0,@intro_texts_addr
        li   r0,intro_path_1
        bl   @play_path
-*      Screen 2
-       bl   @intro_screen
-       li   r0,texts_intro_2a
+*      Your marker
+       li   r0,texts_intro_2
        mov  r0,@intro_texts_addr
-       li   r0,intro_path_2a
+       li   r0,intro_path_2
        bl   @play_path
-       li   r0,texts_intro_2b
+*      Slow area
+       li   r0,texts_intro_3
        mov  r0,@intro_texts_addr
-       li   r0,intro_path_2b
+       li   r0,intro_path_3
        bl   @play_path
-       li   r0,texts_intro_2c
+*      Fast area
+       li   r0,texts_intro_4
        mov  r0,@intro_texts_addr
-       li   r0,intro_path_0
+       li   r0,intro_path_4
        bl   @play_path
-       li   r0,texts_intro_3c
+*      Scores
+       li   r0,texts_intro_5
        mov  r0,@intro_texts_addr
-       li   r0,intro_path_0
+       li   r0,intro_path_1
        bl   @play_path
-*      Screen X
-       bl   @intro_screen
-*      Pause
-       seto r2
-       bl   @wait_fire
+*      Bonus
+       li   r0,texts_intro_6
+       mov  r0,@intro_texts_addr
+       li   r0,intro_path_5
+       bl   @play_path
+*      Your opponents
+       li   r0,tix_tail
+       mov  r0,@tix_tail_pointer
+       li   r0,texts_intro_7
+       mov  r0,@intro_texts_addr
+       li   r0,intro_path_5
+       bl   @play_path
+*      The Tix
+       li   r0,texts_intro_8
+       mov  r0,@intro_texts_addr
+       li   r0,intro_path_6
+       bl   @play_path
+*      Sparx
+       inct @n_sparks
+       li   r0,texts_intro_9
+       mov  r0,@intro_texts_addr
+       li   r0,intro_path_7
+       bl   @play_path
+*      Fuse
+       li   r0,texts_intro_10
+       mov  r0,@intro_texts_addr
+       li   r0,intro_path_8
+       bl   @play_path
+*      Spiral death traå
+       li   r0,texts_intro_11
+       mov  r0,@intro_texts_addr
+       li   r0,intro_path_9
+       bl   @play_path
+*      Loop
+       b    @intro_1
        .endproc
 *// intro
 
@@ -62,9 +103,6 @@ intro:
 *
 intro_screen:
        .proc
-       li   r3,20
-       bl   @init_map_with_height
-       bl   @refresh_screen
        .endproc
 *// intro_screen
 
@@ -105,18 +143,27 @@ intro_game_loop_1:
        bl   @auto_user_input
        bl   @move_player
        bl   @plot_trail
-       ;       bl   @move_tix
-       ;       bl   @update_sparks
-       ;       bl   @update_fuse
+       mov  @tix_tail_pointer,r0
+       jeq  intro_game_loop_3
+       bl   @move_tix
+intro_game_loop_3:
+       mov  @n_sparks,r0
+       jeq  intro_game_loop_4
+       bl   @update_sparks
+intro_game_loop_4:
+       bl   @update_fuse
        bl   @upload_sprites
        bl   @upload_map
        mov  @intro_texts_addr,r0
        jeq  intro_game_loop_2
        bl   @display_overlay_texts
 intro_game_loop_2:
+       bl   @display_score
+       bl   @display_area
        inc  @time
        mov  @status,r0
        jeq  intro_game_loop_1
+       jlt  intro_game_loop_1
        .endproc
 *// intro_game_loop
 
@@ -158,7 +205,8 @@ auto_user_input_3:
        ai   r13,6
        mov  *r13+,r14                  ; New counter
        jgt  auto_user_input_4
-       seto @status
+       clr  @status
+       inc  @status
 auto_user_input_4:
        .endproc
 *// auto_user_input
@@ -215,6 +263,12 @@ display_overlay_text_2:
 intro_texts_addr:
        data 0
 
+intro_init_sparks_data:
+       data 12,4,1,0
+       data 12,map_width_pixels-4,1,0
+       data 0,0,0,0
+       data 0,0,0,0
+
 txt_created_2019:
        text "CREATED 2019 BY"
        byte 0
@@ -269,48 +323,102 @@ txt_75_pct_of_playfield:
 txt_for_special_bonus:
        text "FOR SPECIAL BONUS"
        byte 0
+txt_your_opponents:
+       text "YOUR OPPONENTS:"
+       byte 0
+txt_the_tix:
+       text "THE TIX"
+       byte 0
+txt_tix_line:
+       byte 245-(chr_space-32),246-(chr_space-32),246-(chr_space-32)
+       byte 0
+txt_sparx:
+       text "SPARX"
+       byte 0
+txt_the:
+       text "THE"
+       byte 0
+txt_fuse:
+       text "FUSE"
+       byte 0
+txt_spiral:
+       text "SPIRAL"
+       byte 0
+txt_death:
+       text "DEATH"
+       byte 0
+txt_trap:
+       text "TRAP"
+       byte 0
 
-texts_intro_0:
+texts_intro_1:
        data 10*32+8,txt_created_2019
        data 11*32+7,txt_rasmus_moustgaard
        data -1
-texts_intro_1:
+texts_intro_2:
        data 15*32+10,txt_your_marker
        data 17*32+8,txt_controlled_with
        data 18*32+11,txt_joystick
        data -1
-texts_intro_2a:
+texts_intro_3:
        data 10*32+10,txt_claim_areas
        data 11*32+7,txt_by_joining_walls
        data 12*32+11,txt_with_stix
        data -1
-texts_intro_2b:
+texts_intro_4:
        data 10*32+11,txt_press_fire
        data 11*32+9,txt_to_move_faster
        data -1
-texts_intro_2c:
+texts_intro_5:
        data 13*32+3,txt_slow_score
        data 14*32+7,txt_slow_score_number
        data 13*32+19,txt_fast_score
        data 14*32+23,txt_fast_score_number
        data -1
-texts_intro_3c:
+texts_intro_6:
        data 10*32+8,txt_claim_more_than
        data 11*32+8,txt_75_pct_of_playfield
        data 12*32+7,txt_for_special_bonus
        data -1
+texts_intro_7:
+       data 5*32+2,txt_your_opponents
+       data -1
+texts_intro_8:
+       data 5*32+2,txt_your_opponents
+       data 7*32+4,txt_the_tix
+       data 8*32+8,txt_tix_line
+       data -1
+texts_intro_9:
+       data 5*32+2,txt_your_opponents
+       data 7*32+4,txt_the_tix
+       data 8*32+8,txt_tix_line
+       data 7*32+23,txt_sparx
+       data -1
+texts_intro_10:
+       data 5*32+2,txt_your_opponents
+       data 7*32+4,txt_the_tix
+       data 8*32+8,txt_tix_line
+       data 7*32+23,txt_sparx
+       data 16*32+14,txt_the
+       data 17*32+14,txt_fuse
+       data -1
+texts_intro_11:
+       data 8*32+23,txt_spiral
+       data 9*32+23,txt_death
+       data 10*32+23,txt_trap
+       data -1
 
 *      start_x, start_y
 *      count,dx,dy,fire
-intro_path_0:
-       data 0,39
-       data 120,0,0,1
-       data -1
 intro_path_1:
-       data 15,19
-       data 120,0,0,1
+       data 0,39
+       data 120,0,0,0
        data -1
-intro_path_2a:
+intro_path_2:
+       data 15,19
+       data 120,0,0,0
+       data -1
+intro_path_3:
        data 15,19
        data 4,-1,0,0
        data 6,0,-1,0
@@ -318,10 +426,38 @@ intro_path_2a:
        data 6,0,1,0
        data 16,1,0,0
        data -1
-intro_path_2b:
+intro_path_4:
        data 20,19
        data 6,0,-1,1
        data 6,1,0,1
        data 6,0,1,1
        data 6,1,0,0
+       data -1
+intro_path_5:
+       data 31,19
+       data 120,0,0,0
+       data -1
+intro_path_6:
+       data 31,19
+       data 5,-1,0,0
+       data 7,0,-1,0
+       data -1
+intro_path_7:
+       data 26,13
+       data 2,0,-1,0
+       data 14,-1,0,0
+       data -1
+intro_path_8:
+       data 13,11
+       data 120,0,0,0
+       data 6,0,-1,0
+       data 8,1,0,0
+       data 4,0,1,0
+       data 6,-1,0,0
+       data 2,0,-1,0
+       data 5,1,0,0
+       data -1
+intro_path_9:
+       data 19,7
+       data 280,0,0,0
        data -1
