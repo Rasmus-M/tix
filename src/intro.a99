@@ -9,14 +9,16 @@ intro:
        clr  @scroll_enabled
        li   r0,3*inner_map_size/4      ; 75%
        mov  r0,@area_required
+       clr  @time
+       clr  @displayed_time
 intro_1:
-       clr  @area
-       clr  @score_lsw
-       clr  @score_msw
+       li   r0,3
+       mov  r0,@lives
        clr  @trail_pointer
        clr  @fuse_trail_pointer
        clr  @fuse_active
        clr  @inactivity_time
+       clr  @time_out
 *      Init tix
        li   r0,172
        li   r1,48
@@ -29,12 +31,13 @@ intro_1:
 *      Map
        li   r3,20
        bl   @init_map_with_height
-       bl   @refresh_screen
 *      Plot out of view parking area
        li   r0,4
        li   r1,39*8+4
        li   r2,white*256
        bl   @plot
+*      Refresh
+       bl   @refresh_screen
 *      Created by
        li   r0,texts_intro_1
        mov  r0,@intro_texts_addr
@@ -116,6 +119,9 @@ intro_1:
        mov  r0,r0
        jne  intro_2
 *      Loop
+       clr  @score_lsw
+       clr  @score_msw
+       clr  @area
        b    @intro_1
 intro_2:
        .endproc
@@ -150,7 +156,6 @@ play_path:
        mov  *r13+,r14
        clr  @status
        bl   @intro_game_loop
-;       bl   @refresh_screen
        li   r0,JOY_FI
        bl   @check_key
        jne  play_path_1
@@ -190,8 +195,6 @@ intro_game_loop_4:
        jeq  intro_game_loop_2
        bl   @display_overlay_texts
 intro_game_loop_2:
-       bl   @display_score
-       bl   @display_area
        inc  @time
        mov  @status,r0
        jeq  intro_game_loop_1

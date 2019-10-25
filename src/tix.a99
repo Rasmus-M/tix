@@ -2286,6 +2286,10 @@ one_time_init_1:
        li   r1,top
        li   r2,top_height/8*32
        bl   @vmbw
+*      Variables
+       clr  @area
+       clr  @score_lsw
+       clr  @score_msw
        .endproc
 *// one_time_init
 
