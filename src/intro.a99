@@ -5,6 +5,7 @@
 intro:
        .proc
 *      Init variables
+       clr  @scroll_y
        clr  @scroll_enabled
        li   r0,3*inner_map_size/4      ; 75%
        mov  r0,@area_required
@@ -39,31 +40,43 @@ intro_1:
        mov  r0,@intro_texts_addr
        li   r0,intro_path_1
        bl   @play_path
+       mov  r0,r0
+       jne  intro_2
 *      Your marker
        li   r0,texts_intro_2
        mov  r0,@intro_texts_addr
        li   r0,intro_path_2
        bl   @play_path
+       mov  r0,r0
+       jne  intro_2
 *      Slow area
        li   r0,texts_intro_3
        mov  r0,@intro_texts_addr
        li   r0,intro_path_3
        bl   @play_path
+       mov  r0,r0
+       jne  intro_2
 *      Fast area
        li   r0,texts_intro_4
        mov  r0,@intro_texts_addr
        li   r0,intro_path_4
        bl   @play_path
+       mov  r0,r0
+       jne  intro_2
 *      Scores
        li   r0,texts_intro_5
        mov  r0,@intro_texts_addr
        li   r0,intro_path_1
        bl   @play_path
+       mov  r0,r0
+       jne  intro_2
 *      Bonus
        li   r0,texts_intro_6
        mov  r0,@intro_texts_addr
        li   r0,intro_path_5
        bl   @play_path
+       mov  r0,r0
+       jne  intro_2
 *      Your opponents
        li   r0,tix_tail
        mov  r0,@tix_tail_pointer
@@ -71,29 +84,40 @@ intro_1:
        mov  r0,@intro_texts_addr
        li   r0,intro_path_5
        bl   @play_path
+       mov  r0,r0
+       jne  intro_2
 *      The Tix
        li   r0,texts_intro_8
        mov  r0,@intro_texts_addr
        li   r0,intro_path_6
        bl   @play_path
+       mov  r0,r0
+       jne  intro_2
 *      Sparx
        inct @n_sparks
        li   r0,texts_intro_9
        mov  r0,@intro_texts_addr
        li   r0,intro_path_7
        bl   @play_path
+       mov  r0,r0
+       jne  intro_2
 *      Fuse
        li   r0,texts_intro_10
        mov  r0,@intro_texts_addr
        li   r0,intro_path_8
        bl   @play_path
+       mov  r0,r0
+       jne  intro_2
 *      Spiral death traå
        li   r0,texts_intro_11
        mov  r0,@intro_texts_addr
        li   r0,intro_path_9
        bl   @play_path
+       mov  r0,r0
+       jne  intro_2
 *      Loop
        b    @intro_1
+intro_2:
        .endproc
 *// intro
 
@@ -126,7 +150,15 @@ play_path:
        mov  *r13+,r14
        clr  @status
        bl   @intro_game_loop
-       bl   @refresh_screen
+;       bl   @refresh_screen
+       li   r0,JOY_FI
+       bl   @check_key
+       jne  play_path_1
+       clr  r0
+       jmp  play_path_2
+play_path_1:
+       seto r0
+play_path_2:
        .endproc
 *// play_path
 
@@ -173,8 +205,11 @@ intro_game_loop_2:
 *
 auto_user_input:
        .proc
+       li   r0,JOY_FI
+       bl   @check_key
+       jne  auto_user_input_4
        mov  @char_aligned,r0
-       jeq  auto_user_input_4
+       jeq  auto_user_input_5
        mov  *r13+,r2                   ; dx
        mov  *r13+,r3                   ; dy
        mov  *r13,r4                    ; Fire
@@ -201,13 +236,14 @@ auto_user_input_3:
        mov  r3,@vy
 *      Update auto counter
        dec  r14
-       jne  auto_user_input_4
+       jne  auto_user_input_5
        ai   r13,6
        mov  *r13+,r14                  ; New counter
-       jgt  auto_user_input_4
+       jgt  auto_user_input_5
+auto_user_input_4:
        clr  @status
        inc  @status
-auto_user_input_4:
+auto_user_input_5:
        .endproc
 *// auto_user_input
 
