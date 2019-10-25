@@ -1000,10 +1000,16 @@ update_sparks_14:
        a    *r4+,*r3+                  ; x = x + dx
 *      Check if player is captured
        mov  r5,r3
-       c    *r3+,@y
-       jne  update_sparks_15
-       c    *r3+,@x
-       jne  update_sparks_15
+       mov  *r3+,r0
+       s    @y,r0
+       abs  r0
+       ci   r0,4
+       jgt  update_sparks_15
+       mov  *r3+,r0
+       s    @x,r0
+       abs  r0
+       ci   r0,4
+       jgt  update_sparks_15
 *      Captured
        li   r0,init_sparks_data
        mov  r5,r3
