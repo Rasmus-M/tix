@@ -38,86 +38,34 @@ intro_1:
        bl   @plot
 *      Refresh
        bl   @refresh_screen
+*      Screen data pointer
+       li   r0,intro_screen_data
+       mov  r0,@intro_screen_ptr
 *      Created by
-       li   r0,texts_intro_1
-       mov  r0,@intro_texts_addr
-       li   r0,intro_path_1
-       bl   @play_path
-       mov  r0,r0
-       jne  intro_2
+       bl   @intro_screen
 *      Your marker
-       li   r0,texts_intro_2
-       mov  r0,@intro_texts_addr
-       li   r0,intro_path_2
-       bl   @play_path
-       mov  r0,r0
-       jne  intro_2
+       bl   @intro_screen
 *      Slow area
-       li   r0,texts_intro_3
-       mov  r0,@intro_texts_addr
-       li   r0,intro_path_3
-       bl   @play_path
-       mov  r0,r0
-       jne  intro_2
+       bl   @intro_screen
 *      Fast area
-       li   r0,texts_intro_4
-       mov  r0,@intro_texts_addr
-       li   r0,intro_path_4
-       bl   @play_path
-       mov  r0,r0
-       jne  intro_2
+       bl   @intro_screen
 *      Scores
-       li   r0,texts_intro_5
-       mov  r0,@intro_texts_addr
-       li   r0,intro_path_1
-       bl   @play_path
-       mov  r0,r0
-       jne  intro_2
+       bl   @intro_screen
 *      Bonus
-       li   r0,texts_intro_6
-       mov  r0,@intro_texts_addr
-       li   r0,intro_path_5
-       bl   @play_path
-       mov  r0,r0
-       jne  intro_2
+       bl   @intro_screen
 *      Your opponents
        li   r0,tix_tail
        mov  r0,@tix_tail_pointer
-       li   r0,texts_intro_7
-       mov  r0,@intro_texts_addr
-       li   r0,intro_path_5
-       bl   @play_path
-       mov  r0,r0
-       jne  intro_2
+       bl   @intro_screen
 *      The Tix
-       li   r0,texts_intro_8
-       mov  r0,@intro_texts_addr
-       li   r0,intro_path_6
-       bl   @play_path
-       mov  r0,r0
-       jne  intro_2
+       bl   @intro_screen
 *      Sparx
        inct @n_sparks
-       li   r0,texts_intro_9
-       mov  r0,@intro_texts_addr
-       li   r0,intro_path_7
-       bl   @play_path
-       mov  r0,r0
-       jne  intro_2
+       bl   @intro_screen
 *      Fuse
-       li   r0,texts_intro_10
-       mov  r0,@intro_texts_addr
-       li   r0,intro_path_8
-       bl   @play_path
-       mov  r0,r0
-       jne  intro_2
+       bl   @intro_screen
 *      Spiral death traå
-       li   r0,texts_intro_11
-       mov  r0,@intro_texts_addr
-       li   r0,intro_path_9
-       bl   @play_path
-       mov  r0,r0
-       jne  intro_2
+       bl   @intro_screen
 *      Loop
        clr  @score_lsw
        clr  @score_msw
@@ -133,7 +81,29 @@ intro_2:
 *
 intro_screen:
        .proc
+       mov  @intro_screen_ptr,r1
+       mov  *r1+,@intro_texts_addr
+       mov  *r1+,r0
+       mov  r1,@intro_screen_ptr
+       bl   @play_path
+       mov  r0,r0
+       jeq  intro_screen_1
+       .pop  r11
+       b     @intro_2
+intro_screen_1:
        .endproc
+intro_screen_data:
+       data texts_intro_1,intro_path_1
+       data texts_intro_2,intro_path_2
+       data texts_intro_3,intro_path_3
+       data texts_intro_4,intro_path_4
+       data texts_intro_5,intro_path_1
+       data texts_intro_6,intro_path_5
+       data texts_intro_7,intro_path_5
+       data texts_intro_8,intro_path_6
+       data texts_intro_9,intro_path_7
+       data texts_intro_10,intro_path_8
+       data texts_intro_11,intro_path_9
 *// intro_screen
 
 *********************************************************************
@@ -299,6 +269,8 @@ display_overlay_text_2:
 *
 * Data
 *
+intro_screen_ptr:
+       data 0
 intro_texts_addr:
        data 0
 
