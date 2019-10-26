@@ -578,7 +578,7 @@ move_player:
        mov  @y,@y_old
 *      Check where we're going
        abs  @char_aligned
-       jeq  move_player_4
+       jeq  move_player_2
 *      Check one char away
        mov  @dx,r0
        sla  r0,3
@@ -590,19 +590,13 @@ move_player:
        a    @y,r1
        bl   @map_address
        movb *r0,r1
-       jeq  move_player_2
+       jeq  move_player_1
        cb   r1,@b_white
        jne  move_player_10
-       mov  @trail_pointer,r1
-       jeq  move_player_4
-move_player_1:
-       dect r1
-       c    r0,*r1
+       bl   @check_for_trail
        jeq  move_player_10
-       ci   r1,trail
-       jne  move_player_1
 *      Check two chars away
-move_player_2:
+move_player_1:
        mov  r2,r0
        sla  r0,1
        a    @x,r0
@@ -611,18 +605,11 @@ move_player_2:
        a    @y,r1
        bl   @map_address
        cb   *r0,@b_white
-       jne  move_player_4
-       mov  @trail_pointer,r1
-       jeq  move_player_4
-move_player_3:
-       dect r1
-       c    r0,*r1
+       jne  move_player_2
+       bl   @check_for_trail
        jeq  move_player_10
-       ci   r1,trail
-       jne  move_player_3
-       jmp  move_player_4
 *      Move x
-move_player_4:
+move_player_2:
        mov  @x,r0
        a    @vx,r0
        ci   r0,4
@@ -734,7 +721,7 @@ move_tix:
        .proc
 *      Check if trailing
        mov  @trail_pointer,r0
-       jeq  move_tix_5
+       jeq  move_tix_1
 *      Move towards player
        mov  @x,r0
        sla  r0,4
@@ -746,28 +733,28 @@ move_tix:
        s    @tix_y,r1
        sra  r1,7
        mov  r1,@tix_ay
-       jmp  move_tix_0
+       jmp  move_tix_3
 *      Just move
-move_tix_5:
+move_tix_1:
        clr  @tix_ax
        clr  @tix_ay
        mov  @tix_dx,r0
        abs  r0
        ci   r0,>0200
-       jlt  move_tix_6
+       jlt  move_tix_2
        mov  @tix_dx,r0
        sra  r0,1
        mov  r0,@tix_dx
-move_tix_6:
+move_tix_2:
        mov  @tix_dy,r1
        abs  r1
        ci   r1,>0200
-       jlt  move_tix_0
+       jlt  move_tix_3
        mov  @tix_dy,r1
        sra  r1,1
        mov  r1,@tix_dy
 *      Acceleration
-move_tix_0:
+move_tix_3:
        a    @tix_ax,@tix_dx            ; dx FP 8.8
        a    @tix_ay,@tix_dy            ; dy FP 8.8
 *      Velocity
@@ -788,46 +775,38 @@ move_tix_0:
        sra  r1,4                       ; Unmoved y
        bl   @map_address
        movb *r0,r1
-       jeq  move_tix_1
+       jeq  move_tix_4
 *      Collision vertical
        neg  @tix_dx
-       jmp  move_tix_1a
-move_tix_1:
+       jmp  move_tix_5
+move_tix_4:
        mov  @tix_x,r0
        sra  r0,4                       ; Unmoved x
        mov  r5,r1                      ; Moved y
        bl   @map_address
        movb *r0,r1
-       jeq  move_tix_2
+       jeq  move_tix_6
 *      Collision horizontal
        neg  @tix_dy
-move_tix_1a:
+move_tix_5:
 *      Check if hit trail
-       mov  @trail_pointer,r1
-       jeq  move_tix_3
-move_tix_1b:
-       dect r1
-       c    r0,*r1
-       jeq  move_tix_1c
-       ci   r1,trail
-       jne  move_tix_1b
-       jmp  move_tix_3
-move_tix_1c:
+       bl   @check_for_trail
+       jne  move_tix_7
 *      Hit trail
        dec  @status
-       jmp  move_tix_3
+       jmp  move_tix_7
 *      Move
-move_tix_2:
+move_tix_6:
        mov  r2,@tix_x
        mov  r3,@tix_y
-move_tix_3:
+move_tix_7:
 *      Save current position in the tail list
        mov  @tix_tail_pointer,r0
        ai   r0,-4
        ci   r0,tix_tail
-       jhe  move_tix_4
+       jhe  move_tix_8
        li   r0,tix_tail+tix_tail_size-4
-move_tix_4:
+move_tix_8:
        mov  r0,@tix_tail_pointer
        mov  r5,*r0+                    ; y
        mov  r4,*r0+                    ; x
@@ -1749,6 +1728,28 @@ flood_fill_addr_3:
 flood_fill_addr_4:
        rt
 *// flood_fill_addr
+
+*********************************************************************
+*
+* Check if map address is part of trail
+*
+* r0: Map address
+*
+* On return eq is set if address is part of trail.
+*
+check_for_trail:
+       mov  @trail_pointer,r1
+       jeq  check_for_trail_2
+check_for_trail_1:
+       dect r1
+       c    r0,*r1
+       jeq  check_for_trail_3
+       ci   r1,trail
+       jne  check_for_trail_1
+check_for_trail_2:
+       c    r0,r1                       ; Set neq: r0 is map address; r1 is 0 or trail
+check_for_trail_3:
+       rt
 
 *********************************************************************
 *
