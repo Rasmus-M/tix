@@ -578,15 +578,16 @@ move_player:
        mov  @y,@y_old
 *      Check where we're going
        abs  @char_aligned
-       jeq  move_player_2
-*      Check one char away
+       jeq  move_player_4
+*      Calculate dx*8 and dy*8
        mov  @dx,r0
        sla  r0,3
-       mov  r0,r2
-       a    @x,r0
+       mov  r0,r2                      ; dx * 8
        mov  @dy,r1
        sla  r1,3
-       mov  r1,r3
+       mov  r1,r3                      ; dy * 8
+*      Check one char away
+       a    @x,r0
        a    @y,r1
        bl   @map_address
        movb *r0,r1
@@ -608,8 +609,35 @@ move_player_1:
        jne  move_player_2
        bl   @check_for_trail
        jeq  move_player_10
-*      Move x
+*      Check right
 move_player_2:
+       nop
+;       mov  r2,r0                      ; dx
+;       a    @x,r0                      ; x + dx
+;       s    r3,r0                      ; x + dx - dy
+;       mov  r3,r1                      ; dy
+;       a    @y,r1                      ; y + dy
+;       a    r2,r1                      ; y + dy + dx
+;       bl   @map_address
+;       cb   *r0,@b_white
+;       jne  move_player_3
+;       bl   @check_for_trail
+;       jeq  move_player_10
+;*      Check left
+;move_player_3:
+;       mov  r2,r0                      ; dx
+;       a    @x,r0                      ; x + dx
+;       a    r3,r0                      ; x + dx + dy
+;       mov  r3,r1                      ; dy
+;       a    @y,r1                      ; y + dy
+;       s    r2,r1                      ; y + dy - dx
+;       bl   @map_address
+;       cb   *r0,@b_white
+;       jne  move_player_4
+;       bl   @check_for_trail
+;       jeq  move_player_10
+*      Move x
+move_player_4:
        mov  @x,r0
        a    @vx,r0
        ci   r0,4
