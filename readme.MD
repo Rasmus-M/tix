@@ -1,6 +1,9 @@
 # TIX
 
-Tix is a port of the arcade game Qix for the TI-99/4A home computer, created September 2019.
+This game is heavily inspired by the arcade game Qix. But due to the limited graphics capabilities of the TI-99/4A home 
+computer I have chosen to use character graphics rather than pixel graphics for plotting the path of the player.   
+
+Then project was started in September 2019. 
 
 ## System requirements
 
@@ -24,7 +27,7 @@ There are 2 options for running the game:
 
 ## Playing the game
 
-You can play the game using a joystick only. Fire to move faster.
+You can play the game using a joystick only. Fire to move faster. Loo at the intro for tips.
 
 ## License
 
@@ -36,6 +39,7 @@ Thanks to:
 
 * Ralph for his xdt99 tools.
   https://github.com/endlos99/xdt99
+* Tursi for his suggestions on how to improve the code. 
 
 ## Contact
 
