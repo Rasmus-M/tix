@@ -586,7 +586,12 @@ move_player:
        mov  @dy,r1
        sla  r1,3
        mov  r1,r3                      ; dy * 8
+       mov  r2,r2
+       jne  move_player_0
+       mov  r3,r3
+       jeq  move_player_13
 *      Check one char away
+move_player_0:
        a    @x,r0
        a    @y,r1
        bl   @map_address
@@ -596,6 +601,7 @@ move_player:
        jne  move_player_10
        bl   @check_for_trail
        jeq  move_player_10
+       jmp  move_player_4
 *      Check two chars away
 move_player_1:
        mov  r2,r0
@@ -611,31 +617,26 @@ move_player_1:
        jeq  move_player_10
 *      Check right
 move_player_2:
-       nop
-;       mov  r2,r0                      ; dx
-;       a    @x,r0                      ; x + dx
-;       s    r3,r0                      ; x + dx - dy
-;       mov  r3,r1                      ; dy
-;       a    @y,r1                      ; y + dy
-;       a    r2,r1                      ; y + dy + dx
-;       bl   @map_address
-;       cb   *r0,@b_white
-;       jne  move_player_3
-;       bl   @check_for_trail
-;       jeq  move_player_10
-;*      Check left
-;move_player_3:
-;       mov  r2,r0                      ; dx
-;       a    @x,r0                      ; x + dx
-;       a    r3,r0                      ; x + dx + dy
-;       mov  r3,r1                      ; dy
-;       a    @y,r1                      ; y + dy
-;       s    r2,r1                      ; y + dy - dx
-;       bl   @map_address
-;       cb   *r0,@b_white
-;       jne  move_player_4
-;       bl   @check_for_trail
-;       jeq  move_player_10
+       mov  r2,r0                      ; dx
+       a    @x,r0                      ; x + dx
+       s    r3,r0                      ; x + dx - dy
+       mov  r3,r1                      ; dy
+       a    @y,r1                      ; y + dy
+       a    r2,r1                      ; y + dy + dx
+       bl   @map_address
+       cb   *r0,@b_white
+       jeq  move_player_10
+*      Check left
+move_player_3:
+       mov  r2,r0                      ; dx
+       a    @x,r0                      ; x + dx
+       a    r3,r0                      ; x + dx + dy
+       mov  r3,r1                      ; dy
+       a    @y,r1                      ; y + dy
+       s    r2,r1                      ; y + dy - dx
+       bl   @map_address
+       cb   *r0,@b_white
+       jeq  move_player_10
 *      Move x
 move_player_4:
        mov  @x,r0
@@ -679,6 +680,7 @@ move_player_10:
        jne  move_player_11
        c    @y,@y_old
        jne  move_player_11
+move_player_13:
        inc  @inactivity_time
        jmp  move_player_12
 move_player_11:
@@ -1741,10 +1743,18 @@ flood_fill_addr_1:
        mov  r0,*r1+                    ; Push right
        dect r0                         ; Move left
        mov  r0,*r1+                    ; Push left
-       ai   r0,map_width+1             ; Move down
-       mov  r0,*r1+                    ; Push down
-       ai   r0,-map_width*2            ; Move up
-       mov  r0,*r1+                    ; Push up
+       ai   r0,map_width               ; Move down-left
+       mov  r0,*r1+                    ; Push down-left
+       inc  r0                         ; Move down-middle
+       mov  r0,*r1+                    ; Push down-middle
+       inc  r0                         ; Move down-right
+       mov  r0,*r1+                    ; Push down-right
+       ai   r0,-map_width*2            ; Move up-right
+       mov  r0,*r1+                    ; Push up-right
+       dec  r0                         ; Move up-middle
+       mov  r0,*r1+                    ; Push up-middle
+       dec  r0                         ; Move up-left
+       mov  r0,*r1+                    ; Push up-left
        inc  r4
        jmp  flood_fill_addr_1
 flood_fill_addr_2:
