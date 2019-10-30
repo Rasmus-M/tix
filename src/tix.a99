@@ -1,6 +1,6 @@
 *********************************************************************
 *
-* Tix (Qix port)
+* Tix (Qix like)
 * For the TI-99/4A home computer
 * 16K cartridge version
 *
@@ -2682,11 +2682,31 @@ wait_fire_2:
 * Program files
 *
        copy "intro.a99"
+       copy "sound-defs.a99"
+       copy "sound-player.a99"
+       copy "music-player.a99"
 
 *********************************************************************
 *
 * Data
 *
+snd_channel_1:
+       bss  snd_channel_size
+snd_channel_2:
+       bss  snd_channel_size
+snd_channel_3:
+       bss  snd_channel_size
+snd_channel_4:
+       bss  snd_channel_size
+snd_track_1:
+       bss  snd_track_size
+snd_track_2:
+       bss  snd_track_size
+snd_track_3:
+       bss  snd_track_size
+module_speed:
+       data 4
+
 texts_result:
        data 9*32+9,txt_percentage
        data 11*32+9,txt_threshold
