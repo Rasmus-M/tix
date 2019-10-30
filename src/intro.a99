@@ -165,6 +165,7 @@ intro_game_loop_4:
        jeq  intro_game_loop_2
        bl   @display_overlay_texts
 intro_game_loop_2:
+       bl   @snd_player
        inc  @time
        mov  @status,r0
        jeq  intro_game_loop_1

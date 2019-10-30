@@ -450,6 +450,7 @@ game_loop_1:
        bl   @display_score
        bl   @display_area
        bl   @display_time
+       bl   @snd_player
        inc  @time
        mov  @status,r0
        jeq  game_loop_1

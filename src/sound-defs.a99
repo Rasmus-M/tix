@@ -41,29 +41,17 @@ snd_freq_step:                         ; Signed word, n/a for noise
 **
 * Operations
 *
-* T1: 1000ffff
-* T2: 1010ffff
-* T3: 1100ffff
-* P0: 11100000
-* P1: 11100001
-* P2: 11100010
-* P3: 11100011
-* W0: 11100100
-* W1: 11100101
-* W2: 11100110
-* W3: 11100111
-*
-T1     equ  >80                        ; Tone generator 1
-T2     equ  >A0                        ; Tone generator 2
-T3     equ  >C0                        ; Tone generator 3
-P0     equ  >E0                        ; Periodic noise type 0
-P1     equ  >E1                        ; Periodic noise type 1
-P2     equ  >E2                        ; Periodic noise type 2
-P3     equ  >E3                        ; Periodic noise type 3
-W0     equ  >E4                        ; White noise type 0
-W1     equ  >E5                        ; White noise type 1
-W2     equ  >E6                        ; White noise type 2
-W3     equ  >E7                        ; White noise type 3
+T1     equ  >80                        ; 1000ffff Tone generator 1
+T2     equ  >A0                        ; 1010ffff Tone generator 2
+T3     equ  >C0                        ; 1100ffff Tone generator 3
+P0     equ  >E0                        ; 11100000 Periodic noise type 0
+P1     equ  >E1                        ; 11100001 Periodic noise type 1
+P2     equ  >E2                        ; 11100010 Periodic noise type 2
+P3     equ  >E3                        ; 11100011 Periodic noise type 3
+W0     equ  >E4                        ; 11100100 White noise type 0
+W1     equ  >E5                        ; 11100101 White noise type 1
+W2     equ  >E6                        ; 11100110 White noise type 2
+W3     equ  >E7                        ; 11100111 White noise type 3
 
 **
 * Note frequencies
@@ -167,7 +155,7 @@ G#6    equ  >0011
 * Note structure
 *
 * A note consists of a pointer to an instrument,
-* followed by the frequencyof the note.
+* followed by the frequency of the note.
 *
 note_instr:
        equ  0
