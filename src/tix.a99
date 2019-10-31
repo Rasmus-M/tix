@@ -2179,6 +2179,11 @@ join_effect_1:
        mov    r0,*r3+
        dec  r2
        jne  join_effect_1
+*      Play sound
+       li   r0,snd_join
+       li   r1,snd_channel_1
+       li   r2,>0340
+       bl   @play_snd
 *      Loop
        li   r0,127
        mov  r0,@time
@@ -2205,6 +2210,8 @@ join_effect_4:
 *      Next sprite
        dec  r2
        jne  join_effect_4
+*      Sound player
+       bl   @snd_player
 *      Next frame
        dec  @time
        jne  join_effect_2
@@ -2229,6 +2236,11 @@ split_effect_1:
        mov  @x,*r3+
        dec  r2
        jne  split_effect_1
+*      Play sound
+       li   r0,snd_split
+       li   r1,snd_channel_1
+       li   r2,>0040
+       bl   @play_snd
 *      Loop
        li   r0,127
        mov  r0,@time
@@ -2255,6 +2267,8 @@ split_effect_4:
 *      Next sprite
        dec  r2
        jne  split_effect_4
+*      Play sound
+       bl   @snd_player
 *      Next frame
        dec  @time
        jne  split_effect_2
@@ -2684,6 +2698,7 @@ wait_fire_2:
 *
        copy "intro.a99"
        copy "sound-defs.a99"
+       copy "sound-fx.a99"
        copy "sound-player.a99"
        copy "music-player.a99"
 
