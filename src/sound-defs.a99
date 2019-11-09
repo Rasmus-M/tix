@@ -1,4 +1,6 @@
+**
 * Sound channel structure
+*
 snd_channel_addr:
        equ  0
 snd_channel_duration:
@@ -10,7 +12,9 @@ snd_channel_freq:
 snd_channel_size:
        equ  6
 
+**
 * Sound track structure
+*
 snd_track_channel:                     ; Channel to play track in, zero if track inactive
        equ  0
 snd_track_location:                    ; Location in track, points to sequence pointer or command

@@ -4,9 +4,12 @@
 *
 play_join:
        .proc
-       li   r0,snd_join
+       li   r0,snd_join_1
        li   r1,snd_channel_1
-       li   r2,>0340
+       li   r2,>0010
+       bl   @play_snd
+       li   r0,snd_join_2
+       li   r1,snd_channel_2
        bl   @play_snd
        .endproc
 *// play_join
@@ -28,12 +31,18 @@ play_split:
 *
 * Sound FXs
 *
-snd_join:
-       byte T1
+snd_join_1:
+       byte T3
+       byte 128                        ; Frames
+       byte >f0                        ; Attn start
+       byte 0                          ; Attn step
+       data 3                          ; Freq step
+snd_join_2:
+       byte W3
        byte 128                        ; Frames
        byte 0                          ; Attn start
-       byte 1                          ; Attn step
-       data -6                         ; Freq step
+       byte 0                          ; Attn step
+
 snd_split:
        byte T1
        byte 128                        ; Frames

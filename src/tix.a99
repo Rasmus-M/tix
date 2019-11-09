@@ -2176,7 +2176,7 @@ join_effect_1:
        mov  r0,*r3+
        mov  *r1+,r0
        a    @x,r0
-       mov    r0,*r3+
+       mov  r0,*r3+
        dec  r2
        jne  join_effect_1
 *      Play sound

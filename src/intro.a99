@@ -44,6 +44,11 @@ intro_1:
 *      Created by
        bl   @intro_screen
 *      Your marker
+       li   r0,15*8
+       mov  r0,@x
+       li   r1,19*8
+       mov  r1,@y
+       bl   @join_effect
        bl   @intro_screen
 *      Slow area
        bl   @intro_screen
