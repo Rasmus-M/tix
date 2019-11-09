@@ -3,7 +3,7 @@
 This game is heavily inspired by the arcade game Qix. But due to the limited graphics capabilities of the TI-99/4A home 
 computer I have chosen to use character graphics rather than pixel graphics for plotting the path of the player.   
 
-Then project was started in September 2019. 
+This project started in September 2019. 
 
 ## System requirements
 

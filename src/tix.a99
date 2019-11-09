@@ -2180,10 +2180,7 @@ join_effect_1:
        dec  r2
        jne  join_effect_1
 *      Play sound
-       li   r0,snd_join
-       li   r1,snd_channel_1
-       li   r2,>0340
-       bl   @play_snd
+       bl   @play_join
 *      Loop
        li   r0,127
        mov  r0,@time
@@ -2237,10 +2234,7 @@ split_effect_1:
        dec  r2
        jne  split_effect_1
 *      Play sound
-       li   r0,snd_split
-       li   r1,snd_channel_1
-       li   r2,>0040
-       bl   @play_snd
+       bl   @play_split
 *      Loop
        li   r0,127
        mov  r0,@time

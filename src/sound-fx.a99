@@ -1,4 +1,31 @@
-**
+*********************************************************************
+*
+* Play join effect
+*
+play_join:
+       .proc
+       li   r0,snd_join
+       li   r1,snd_channel_1
+       li   r2,>0340
+       bl   @play_snd
+       .endproc
+*// play_join
+
+*********************************************************************
+*
+* Play split effect
+*
+play_split:
+       .proc
+       li   r0,snd_split
+       li   r1,snd_channel_1
+       li   r2,>0040
+       bl   @play_snd
+       .endproc
+*// play_split
+
+*********************************************************************
+*
 * Sound FXs
 *
 snd_join:
