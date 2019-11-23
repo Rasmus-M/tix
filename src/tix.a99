@@ -1436,6 +1436,7 @@ display_time_line_3:
 *
 level_completed:
        .proc
+       bl   @mute_sound
 *      Refresh screen
        li   r0,spratb
        li   r1,>d000
@@ -1491,6 +1492,7 @@ level_completed:
 *
 died:
        .proc
+       bl   @mute_sound
        dec  @lives
        bl   @display_lives
        bl   @split_effect
@@ -1505,6 +1507,7 @@ died:
 *
 game_over:
        .proc
+       bl   @mute_sound
        li   r0,10*32+11
        li   r1,11
        li   r2,3
