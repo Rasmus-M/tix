@@ -1,5 +1,26 @@
 *********************************************************************
 *
+* Mute sound
+*
+mute_sound:
+       li   r0,mute_table              ; Mute all
+       li   r2,4
+mute_sound_1:
+       movb *r0+,@sound
+       dec  r2
+       jne  mute_sound_1
+       clr  @snd_channel_1
+       clr  @snd_channel_2
+       clr  @snd_channel_3
+       clr  @snd_channel_4
+*      Return
+       rt
+mute_table:
+       byte >9f, >bf, >df, >ff
+*// mute_sound
+
+*********************************************************************
+*
 * Play join effect
 *
 play_join:
@@ -20,12 +41,41 @@ play_join:
 *
 play_split:
        .proc
-       li   r0,snd_split
+       li   r0,snd_split_1
        li   r1,snd_channel_1
-       li   r2,>0040
+       li   r2,>0300
+       bl   @play_snd
+       li   r0,snd_split_2
+       li   r1,snd_channel_2
        bl   @play_snd
        .endproc
 *// play_split
+
+*********************************************************************
+*
+* Play fill effect
+*
+play_fill:
+       .proc
+       li   r0,snd_fill
+       li   r1,snd_channel_1
+       li   r2,>0300
+       bl   @play_snd
+       .endproc
+*// play_fill
+
+*********************************************************************
+*
+* Play fill effect 2
+*
+play_fill_2:
+       .proc
+       li   r0,snd_fill_2
+       li   r1,snd_channel_1
+       li   r2,>0300
+       bl   @play_snd
+       .endproc
+*// play_fill_2
 
 *********************************************************************
 *
@@ -43,41 +93,28 @@ snd_join_2:
        byte 0                          ; Attn start
        byte 0                          ; Attn step
 
-snd_split:
-       byte T1
+snd_split_1:
+       byte T3
        byte 128                        ; Frames
        byte 0                          ; Attn start
-       byte 1                          ; Attn step
-       data 6                          ; Freq step
-
-snd_jump:
+       byte 0                          ; Attn step
+       data -3                         ; Freq step
+snd_split_2:
+       byte W3
+       byte 128                        ; Frames
+       byte 0                          ; Attn start
+       byte 0                          ; Attn step
+snd_fill:
        byte T1
        byte 16                         ; Frames
        byte 0                          ; Attn start
        byte 16                         ; Attn step
        data -8                         ; Freq step
-snd_long_jump:
+snd_fill_2:
        byte T1
        byte 48                         ; Frames
        byte 0                          ; Attn start
        byte 4                          ; Attn step
        data -10                        ; Freq step
-snd_star:
-       byte T1
-       byte 64                         ; Frames
-       byte 0                          ; Attn start
-       byte 4                          ; Attn step
-       data 0                          ; Freq step
-snd_die:
-       byte W0
-       byte 64                         ; Frames
-       byte 0                          ; Attn start
-       byte 4                          ; Attn step
-snd_finish:
-       byte T1
-       byte 127                        ; Frames
-       byte 0                          ; Attn start
-       byte 0                          ; Attn step
-       data -8                         ; Freq step
 
        even

@@ -1570,6 +1570,16 @@ fill_area_3:
        ai   r0,-trail
        srl  r0,1
        a    r4,r0
+       .push r0
+*      Play sound
+       abs  @slow
+       jne  fill_area_4
+       bl   @play_fill
+       jmp  fill_area_5
+fill_area_4:
+       bl   @play_fill_2
+fill_area_5:
+       .pop r0
        .endproc
 *// fill_area
 
@@ -2212,6 +2222,8 @@ join_effect_4:
 *      Next frame
        dec  @time
        jne  join_effect_2
+*      Mute
+       bl   @mute_sound
        .endproc
 join_coords:
        data -256,-256,256,-256,256,256,-256,256
@@ -2266,6 +2278,8 @@ split_effect_4:
 *      Next frame
        dec  @time
        jne  split_effect_2
+*      Mute
+       bl   @mute_sound
        .endproc
 split_dirs:
        data 2,2,-2,2,-2,-2,2,-2
