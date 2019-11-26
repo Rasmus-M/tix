@@ -440,8 +440,8 @@ game_loop_1:
        bl   @set_vdp_regs
        bl   @check_alignment
        bl   @user_input
-       bl   @move_player
        bl   @plot_trail
+       bl   @move_player
        bl   @move_tix
        bl   @update_sparks
        bl   @update_fuse
@@ -571,6 +571,60 @@ user_input_9:
 
 *********************************************************************
 *
+* Plot trail
+*
+plot_trail:
+       .proc
+       abs  @char_aligned
+       jeq  plot_trail_5
+       mov  @x,r0
+       mov  @y,r1
+       bl   @map_address
+       movb *r0,r1
+       jne  plot_trail_1
+*      Empty position
+       mov  @trail_pointer,r1
+       jne  plot_trail_0
+       li   r1,trail                   ; New trail
+       seto @slow
+plot_trail_0:
+       mov  r0,*r1+
+       mov  r1,@trail_pointer
+       li   r2,>0100
+       movb r2,*r0                     ; Plot
+       jmp  plot_trail_5
+*      Not empty position
+plot_trail_1:
+       mov  @trail_pointer,r1
+       jeq  plot_trail_4               ; No trail
+       dect r1
+       c    r0,*r1
+       jeq  plot_trail_5
+*      End of trail:
+       bl   @fill_area
+       a    r0,@area
+       c    @area,@area_required
+       jlt  plot_trail_2
+       inc  @status
+plot_trail_2:
+       abs  @slow
+       jeq  plot_trail_3
+       sla  r0,1
+plot_trail_3:
+       bl   @add_score
+       clr  @trail_pointer
+       clr  @fuse_trail_pointer
+       clr  @fuse_active
+       jmp  plot_trail_5
+plot_trail_4:
+       mov  @x,@last_safe_x
+       mov  @y,@last_safe_y
+plot_trail_5:
+       .endproc
+*// plot_trail
+
+*********************************************************************
+*
 * Move player
 *
 move_player:
@@ -601,6 +655,9 @@ move_player_0:
        cb   r1,@b_white
        jne  move_player_10
        bl   @check_for_trail
+       jeq  move_player_10
+       mov  @trail_pointer,r1          ; Prevent one char trail
+       ci   r1,trail+2
        jeq  move_player_10
        jmp  move_player_4
 *      Check two chars away
@@ -689,60 +746,6 @@ move_player_11:
 move_player_12:
        .endproc
 *// move_player
-
-*********************************************************************
-*
-* Plot trail
-*
-plot_trail:
-       .proc
-       abs  @char_aligned
-       jeq  plot_trail_5
-       mov  @x,r0
-       mov  @y,r1
-       bl   @map_address
-       movb *r0,r1
-       jne  plot_trail_1
-*      Empty position
-       mov  @trail_pointer,r1
-       jne  plot_trail_0
-       li   r1,trail                   ; New trail
-       seto @slow
-plot_trail_0:
-       mov  r0,*r1+
-       mov  r1,@trail_pointer
-       li   r2,>0100
-       movb r2,*r0                     ; Plot
-       jmp  plot_trail_5
-*      Not empty position
-plot_trail_1:
-       mov  @trail_pointer,r1
-       jeq  plot_trail_4               ; No trail
-       dect r1
-       c    r0,*r1
-       jeq  plot_trail_5
-*      End of trail:
-       bl   @fill_area
-       a    r0,@area
-       c    @area,@area_required
-       jlt  plot_trail_2
-       inc  @status
-plot_trail_2:
-       abs  @slow
-       jeq  plot_trail_3
-       sla  r0,1
-plot_trail_3:
-       bl   @add_score
-       clr  @trail_pointer
-       clr  @fuse_trail_pointer
-       clr  @fuse_active
-       jmp  plot_trail_5
-plot_trail_4:
-       mov  @x_old,@last_safe_x
-       mov  @y_old,@last_safe_y
-plot_trail_5:
-       .endproc
-*// plot_trail
 
 *********************************************************************
 *
@@ -1096,6 +1099,9 @@ update_fuse_4:
        andi r1,7
        ci   r1,4
        jne  update_fuse_5
+*      Check if player is captured
+       c    r4,@trail_pointer
+       jeq  update_fuse_7
 *      Set new direction
        mov  *r4+,r0
        mov  r4,@fuse_trail_pointer
@@ -1110,12 +1116,9 @@ update_fuse_5:
 *      Move fuse
        a    @fuse_dx,@fuse_x
        a    @fuse_dy,@fuse_y
-*      Check if player is captured
-       c    @fuse_x,@x
-       jne  update_fuse_6
-       c    @fuse_y,@y
-       jne  update_fuse_6
+       jmp  update_fuse_6
 *      Stop fuse
+update_fuse_7:
        dec  @status
        clr  @fuse_active
        clr  @fuse_trail_pointer
