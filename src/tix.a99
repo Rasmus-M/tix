@@ -171,8 +171,10 @@ name_table_flag:
        equ  scroll_enabled+2
 vdp_status:
        equ  name_table_flag+2
-tix_x:                                 ; FP 12.4
+n_tixes:
        equ  vdp_status+2
+tix_x:                                 ; FP 12.4
+       equ  n_tixes+2
 tix_y:                                 ; FP 12.4
        equ  tix_x+2
 tix_dx:                                ; FP 8.8
@@ -189,8 +191,26 @@ tix_addr:
        equ  tix_tail_pointer+2
 tix_char:
        equ  tix_addr+2
-n_sparks:
+tix2_x:                                 ; FP 12.4
        equ  tix_char+2
+tix2_y:                                 ; FP 12.4
+       equ  tix2_x+2
+tix2_dx:                                ; FP 8.8
+       equ  tix2_y+2
+tix2_dy:                                ; FP 8.8
+       equ  tix2_dx+2
+tix2_ax:                                ; FP 8.8
+       equ  tix2_dy+2
+tix2_ay:                                ; FP 8.8
+       equ  tix2_ax+2
+tix2_tail_pointer:
+       equ  tix2_ay+2
+tix2_addr:
+       equ  tix2_tail_pointer+2
+tix2_char:
+       equ  tix2_addr+2
+n_sparks:
+       equ  tix2_char+2
 spark_1_y:
        equ  n_sparks+2
 spark_1_x:
