@@ -346,8 +346,7 @@ init_level:
        clr  @scroll_y
        clr  @area
        seto @old_area
-       li   r0,3*inner_map_size/4
-       mov  r0,@area_required
+       bl   @init_area_required
        clr  @time
        clr  @displayed_time
        clr  @trail_pointer
@@ -364,6 +363,27 @@ init_level:
        bl   @init_map
        .endproc
 *// init_level
+
+*********************************************************************
+*
+* Init area required
+*
+init_area_required:
+       mov  @level,r0
+       ci   r0,10
+       jl   init_area_required_1
+       li   r0,9
+init_area_required_1:
+       sla  r0,1
+       ai   r0,level_area_pct
+       mov  *r0,r0
+       mov  r0,@area_required_percent
+       li   r1,inner_map_size
+       mpy  r1,r0
+       div  @d100,r0
+       mov  r0,@area_required
+       rt
+*// init_area_required
 
 *********************************************************************
 *
@@ -664,7 +684,7 @@ move_player:
        mov  r2,r2
        jne  move_player_0
        mov  r3,r3
-       jeq  move_player_13
+       jeq  move_player_7
 *      Check one char away
 move_player_0:
        a    @x,r0
@@ -673,12 +693,12 @@ move_player_0:
        movb *r0,r1
        jeq  move_player_1
        cb   r1,@b_white
-       jne  move_player_10
+       jne  move_player_6
        bl   @check_for_trail
-       jeq  move_player_10
+       jeq  move_player_6
        mov  @trail_pointer,r1          ; Prevent one char trail
        ci   r1,trail+2
-       jeq  move_player_10
+       jeq  move_player_6
        jmp  move_player_4
 *      Check two chars away
 move_player_1:
@@ -692,7 +712,7 @@ move_player_1:
        cb   *r0,@b_white
        jne  move_player_2
        bl   @check_for_trail
-       jeq  move_player_10
+       jeq  move_player_6
 *      Check right
 move_player_2:
        mov  r2,r0                      ; dx
@@ -703,7 +723,7 @@ move_player_2:
        a    r2,r1                      ; y + dy + dx
        bl   @map_address
        cb   *r0,@b_white
-       jeq  move_player_10
+       jeq  move_player_6
 *      Check left
 move_player_3:
        mov  r2,r0                      ; dx
@@ -714,7 +734,7 @@ move_player_3:
        s    r2,r1                      ; y + dy - dx
        bl   @map_address
        cb   *r0,@b_white
-       jeq  move_player_10
+       jeq  move_player_6
 *      Move x
 move_player_4:
        mov  @x,r0
@@ -734,36 +754,19 @@ move_player_5:
        jgt  move_player_6
        mov  r0,@y
 *      Scroll
+       bl   @scroll
+*      Inactivity
 move_player_6:
-       abs  @scroll_enabled
-       jeq  move_player_10
-       mov  @y,r0
-       ci   r0,middle_y
-       jhe  move_player_7
-       clr  r0
-       jmp  move_player_9
+       c    @x,@x_old
+       jne  move_player_8
+       c    @y,@y_old
+       jne  move_player_8
 move_player_7:
-       ci   r0,map_height_pixels-middle_y
-       jlt  move_player_8
-       li   r0,map_height_pixels-(192-top_height)
+       inc  @inactivity_time
        jmp  move_player_9
 move_player_8:
-       mov  @y,r0
-       ai   r0,-middle_y
-move_player_9:
-       mov  r0,@scroll_y
-*      Inactivity
-move_player_10:
-       c    @x,@x_old
-       jne  move_player_11
-       c    @y,@y_old
-       jne  move_player_11
-move_player_13:
-       inc  @inactivity_time
-       jmp  move_player_12
-move_player_11:
        clr  @inactivity_time
-move_player_12:
+move_player_9:
        .endproc
 *// move_player
 
@@ -1336,6 +1339,32 @@ upload_map_2
 
 *********************************************************************
 *
+* Scroll
+*
+scroll:
+       abs  @scroll_enabled
+       jeq  scroll_4
+       mov  @y,r0
+       ci   r0,middle_y
+       jhe  scroll_1
+       clr  r0
+       jmp  scroll_3
+scroll_1:
+       ci   r0,map_height_pixels-middle_y
+       jlt  scroll_2
+       li   r0,map_height_pixels-(192-top_height)
+       jmp  scroll_3
+scroll_2:
+       mov  @y,r0
+       ai   r0,-middle_y
+scroll_3:
+       mov  r0,@scroll_y
+scroll_4:
+       rt
+*// scroll
+
+*********************************************************************
+*
 * Display score
 *
 display_score:
@@ -1665,6 +1694,7 @@ refresh_screen:
        bl   @display_area_required
        bl   @display_time
        bl   @display_lives
+       bl   @scroll
        bl   @upload_map
        bl   @vsync
        bl   @set_vdp_regs
@@ -1916,12 +1946,7 @@ map_coords:
 *
 display_area_required:
        .proc
-       mov  @area_required,r0
-       mpy  @d10,r0                    ; r1=area*10, r0=0
-       li   r2,inner_map_size/10
-       div  r2,r0                      ; area*10/(total_area/10)=100*area/total_area
-       mov  r0,@area_required_percent
-       mov  r0,r1
+       mov  @area_required_percent,r1
        li   r0,48
        li   r2,2
        bl   @display_decimal
@@ -2797,6 +2822,9 @@ b_tix:
        byte tix
 b_d0:
        byte >d0
+
+level_area_pct:
+       data 50,60,70,75,80,85,90,92,94,95
 
        copy "chars.a99"
        copy "sprites.a99"

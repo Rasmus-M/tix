@@ -5,10 +5,10 @@
 intro:
        .proc
 *      Init variables
+       clr  @level
        clr  @scroll_y
        clr  @scroll_enabled
-       li   r0,3*inner_map_size/4      ; 75%
-       mov  r0,@area_required
+       bl   @init_area_required
        clr  @time
        clr  @displayed_time
 intro_1:
@@ -69,7 +69,7 @@ intro_1:
        bl   @intro_screen
 *      Fuse
        bl   @intro_screen
-*      Spiral death traå
+*      Spiral death trap
        bl   @intro_screen
 *      Loop
        clr  @score_lsw
