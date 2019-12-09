@@ -81,6 +81,27 @@ chr_zero:
 chr_zero_tall:
        equ  204
 
+tix_x:                                 ; FP 12.4
+       equ  0
+tix_y:                                 ; FP 12.4
+       equ  2
+tix_dx:                                ; FP 8.8
+       equ  4
+tix_dy:                                ; FP 8.8
+       equ  6
+tix_ax:                                ; FP 8.8
+       equ  8
+tix_ay:                                ; FP 8.8
+       equ  10
+tix_tail_pointer:
+       equ  12
+tix_addr:
+       equ  14
+tix_char:
+       equ  16
+tix_size:
+       equ  18
+
 **
 * Scratch pad
 *
@@ -173,35 +194,39 @@ vdp_status:
        equ  name_table_flag+2
 n_tixes:
        equ  vdp_status+2
-tix_x:                                 ; FP 12.4
+tix1:
        equ  n_tixes+2
-tix_y:                                 ; FP 12.4
-       equ  tix_x+2
-tix_dx:                                ; FP 8.8
-       equ  tix_y+2
-tix_dy:                                ; FP 8.8
-       equ  tix_dx+2
-tix_ax:                                ; FP 8.8
-       equ  tix_dy+2
-tix_ay:                                ; FP 8.8
-       equ  tix_ax+2
-tix_tail_pointer:
-       equ  tix_ay+2
-tix_addr:
-       equ  tix_tail_pointer+2
-tix_char:
-       equ  tix_addr+2
-tix2_x:                                 ; FP 12.4
-       equ  tix_char+2
-tix2_y:                                 ; FP 12.4
+tix1_x:                                ; FP 12.4
+       equ  tix1
+tix1_y:                                ; FP 12.4
+       equ  tix1_x+2
+tix1_dx:                               ; FP 8.8
+       equ  tix1_y+2
+tix1_dy:                               ; FP 8.8
+       equ  tix1_dx+2
+tix1_ax:                               ; FP 8.8
+       equ  tix1_dy+2
+tix1_ay:                               ; FP 8.8
+       equ  tix1_ax+2
+tix1_tail_pointer:
+       equ  tix1_ay+2
+tix1_addr:
+       equ  tix1_tail_pointer+2
+tix1_char:
+       equ  tix1_addr+2
+tix2:
+       equ  tix1_char+2
+tix2_x:                                ; FP 12.4
+       equ  tix2
+tix2_y:                                ; FP 12.4
        equ  tix2_x+2
-tix2_dx:                                ; FP 8.8
+tix2_dx:                               ; FP 8.8
        equ  tix2_y+2
-tix2_dy:                                ; FP 8.8
+tix2_dy:                               ; FP 8.8
        equ  tix2_dx+2
-tix2_ax:                                ; FP 8.8
+tix2_ax:                               ; FP 8.8
        equ  tix2_dy+2
-tix2_ay:                                ; FP 8.8
+tix2_ay:                               ; FP 8.8
        equ  tix2_ax+2
 tix2_tail_pointer:
        equ  tix2_ay+2
@@ -356,12 +381,18 @@ init_level:
        li   r0,4
        mov  r0,@y
 *      Tix
-       li   r0,196
-       li   r1,132
+       li   r0,init_tix_level_data_1
        bl   @init_tix
 *      Screen
        bl   @init_map
        .endproc
+init_tix_level_data:
+       data 1
+       data 196,132,>0100,>1100
+init_tix_level_data_2:
+       data 2
+       data 196,132,>0100,>1100
+       data 32,64,>0000,>1100
 *// init_level
 
 *********************************************************************
@@ -389,31 +420,37 @@ init_area_required_1:
 *
 * Init Tix
 *
-* r0: Tix x
-* r1: Tix y
+* r0: Tix init data
 *
 init_tix:
-       mov  r0,r4
+       li   r6,tix1
+       li   r7,tix_tail
+       mov  *r0+,r8                    ; Number of tixes
+       mov  r8,@n_tixes
+       mov  r0,r9
+init_tix_0:
+       mov  *r9+,r4                    ; x
        sla  r4,4
-       mov  r1,r5
+       mov  r4,@tix_x(r6)
+       mov  *r9+,r5                    ; y
        sla  r5,4
-       li   r0,tix_tail
-       mov  r0,@tix_tail_pointer
-       clr  @tix_ax
-       clr  @tix_ay
-       li   r0,1*256
-       mov  r0,@tix_dx
-       li   r1,-1*256
-       mov  r1,@tix_dy
+       mov  r5,@tix_y(r6)
+       mov  *r9+,@tix_dx(r6)
+       mov  *r9+,@tix_dy(r6)
+       clr  @tix_ax(r6)
+       clr  @tix_ay(r6)
        li   r2,tix_tail_size/4
-       li   r3,tix_tail
-       mov  r4,@tix_x
-       mov  r5,@tix_y
+       mov  r7,r3                      ; tix_tail
+       mov  r3,@tix_tail_pointer(r6)
 init_tix_1:
-       mov  r5,*r3+
-       mov  r4,*r3+
+       mov  r5,*r3+                    ; y
+       mov  r4,*r3+                    ; x
        dec  r2
        jne  init_tix_1
+       ai   r6,tix_size
+       ai   r7,tix_tail_size
+       dec  r8
+       jne  init_tix_0
        rt
 *// init_tix
 
@@ -776,51 +813,55 @@ move_player_9:
 *
 move_tix:
        .proc
+       li   r6,tix1
+       li   r7,tix_tail
+       mov  @n_tixes,r8
+move_tix_0:
 *      Check if trailing
        mov  @trail_pointer,r0
        jeq  move_tix_1
 *      Move towards player
        mov  @x,r0
        sla  r0,4
-       s    @tix_x,r0
+       s    @tix_x(r6),r0
        sra  r0,7
-       mov  r0,@tix_ax
+       mov  r0,@tix_ax(r6)
        mov  @y,r1
        sla  r1,4
-       s    @tix_y,r1
+       s    @tix_y(r6),r1
        sra  r1,7
-       mov  r1,@tix_ay
+       mov  r1,@tix_ay(r6)
        jmp  move_tix_3
 *      Just move
 move_tix_1:
-       clr  @tix_ax
-       clr  @tix_ay
-       mov  @tix_dx,r0
+       clr  @tix_ax(r6)
+       clr  @tix_ay(r6)
+       mov  @tix_dx(r6),r0
        abs  r0
        ci   r0,>0200
        jlt  move_tix_2
-       mov  @tix_dx,r0
+       mov  @tix_dx(r6),r0
        sra  r0,1
-       mov  r0,@tix_dx
+       mov  r0,@tix_dx(r6)
 move_tix_2:
-       mov  @tix_dy,r1
+       mov  @tix_dy(r6),r1
        abs  r1
        ci   r1,>0200
        jlt  move_tix_3
-       mov  @tix_dy,r1
+       mov  @tix_dy(r6),r1
        sra  r1,1
-       mov  r1,@tix_dy
+       mov  r1,@tix_dy(r6)
 *      Acceleration
 move_tix_3:
-       a    @tix_ax,@tix_dx            ; dx FP 8.8
-       a    @tix_ay,@tix_dy            ; dy FP 8.8
+       a    @tix_ax(r6),@tix_dx(r6)    ; dx FP 8.8
+       a    @tix_ay(r6),@tix_dy(r6)    ; dy FP 8.8
 *      Velocity
-       mov  @tix_dx,r2
+       mov  @tix_dx(r6),r2
        sra  r2,4
-       a    @tix_x,r2                  ; Moved x FP 12.4
-       mov  @tix_dy,r3
+       a    @tix_x(r6),r2                  ; Moved x FP 12.4
+       mov  @tix_dy(r6),r3
        sra  r3,4
-       a    @tix_y,r3                  ; Moved y FP 12.4
+       a    @tix_y(r6),r3                  ; Moved y FP 12.4
 *      Position
        mov  r2,r4
        sra  r4,4                       ; Moved x
@@ -828,23 +869,23 @@ move_tix_3:
        sra  r5,4                       ; Moved y
 *      Check moved position for collision
        mov  r4,r0                      ; Moved x
-       mov  @tix_y,r1
+       mov  @tix_y(r6),r1
        sra  r1,4                       ; Unmoved y
        bl   @map_address
        movb *r0,r1
        jeq  move_tix_4
 *      Collision vertical
-       neg  @tix_dx
+       neg  @tix_dx(r6)
        jmp  move_tix_5
 move_tix_4:
-       mov  @tix_x,r0
+       mov  @tix_x(r6),r0
        sra  r0,4                       ; Unmoved x
        mov  r5,r1                      ; Moved y
        bl   @map_address
        movb *r0,r1
        jeq  move_tix_6
 *      Collision horizontal
-       neg  @tix_dy
+       neg  @tix_dy(r6)
 move_tix_5:
 *      Check if hit trail
        bl   @check_for_trail
@@ -854,19 +895,25 @@ move_tix_5:
        jmp  move_tix_7
 *      Move
 move_tix_6:
-       mov  r2,@tix_x
-       mov  r3,@tix_y
+       mov  r2,@tix_x(r6)
+       mov  r3,@tix_y(r6)
 move_tix_7:
 *      Save current position in the tail list
-       mov  @tix_tail_pointer,r0
+       mov  @tix_tail_pointer(r6),r0
        ai   r0,-4
-       ci   r0,tix_tail
+       c    r0,r7                      ; tix_tail
        jhe  move_tix_8
-       li   r0,tix_tail+tix_tail_size-4
+       mov  r7,r0
+       ai   r0,tix_tail_size-4
 move_tix_8:
-       mov  r0,@tix_tail_pointer
+       mov  r0,@tix_tail_pointer(r6)
        mov  r5,*r0+                    ; y
        mov  r4,*r0+                    ; x
+*      Loop
+       ai   r6,tix_size
+       ai   r7,tix_tail_size
+       dec  r8
+       jne  move_tix_0
        .endproc
 *// move_tix
 
@@ -1162,17 +1209,56 @@ upload_sprites:
        li   r4,>000d
        bl   @upload_sprite
 *      Tix
-       li   r2,4
-       mov  @tix_tail_pointer,r3
-       jeq  upload_sprites_4a
-       li   r4,tix_attr
+       li   r6,tix1
+       li   r7,tix_tail+tix_tail_size
+       mov  @n_tixes,r8
 upload_sprites_1:
+       bl   @upload_tix
+       ai   r6,tix_size
+       ai   r7,tix_tail_size
+       dec  r8
+       jne  upload_sprites_1
+*      Sparks
+       li   r3,spark_1_y
+       li   r4,>200b
+       mov  @n_sparks,r5
+       jeq  upload_sprites_3
+upload_sprites_2:
+       bl   @upload_sprite
+       ai   r3,4                       ; Skip dy/dx
+       dec  r5
+       jne  upload_sprites_2
+*      Fuse
+       abs  @fuse_active
+       jeq  upload_sprites_3
+       li   r3,fuse_y
+       li   r4,>3008
+       bl   @upload_sprite
+*      End marker
+upload_sprites_3:
+       movb @b_d0,*r15
+       .endproc
+*// upload_sprites
+
+*********************************************************************
+*
+* Upload tix sprites
+*
+* r6: points to tix struct
+* r7: points to tix tail end
+*
+upload_tix:
+       li   r2,4
+       mov  @tix_tail_pointer(r6),r3
+       jeq  upload_tix_5
+       li   r4,tix_attr
+upload_tix_1:
        mov  *r3+,r1
        s    @scroll_y,r1
-       jlt  upload_sprites_2
+       jlt  upload_tix_2
        ai   r1,top_height-9
        ci   r1,191
-       jgt  upload_sprites_2
+       jgt  upload_tix_2
        swpb r1
        movb r1,*r15
        mov  *r3+,r1
@@ -1181,42 +1267,23 @@ upload_sprites_1:
        movb r1,*r15
        movb *r4+,*r15
        movb *r4+,*r15
-       jmp  upload_sprites_3
-upload_sprites_2:
+       jmp  upload_tix_3
+upload_tix_2:
        inct r3
        inct r4
-upload_sprites_3:
+upload_tix_3:
        ai   r3,8
-       ci   r3,tix_tail+tix_tail_size
-       jl   upload_sprites_4
+       c    r3,r7                      ; Compare to tix tail end
+       jl   upload_tix_4
        ai   r3,-tix_tail_size
-upload_sprites_4:
+upload_tix_4:
        dec  r2
-       jne  upload_sprites_1
-*      Sparks
-upload_sprites_4a:
-       li   r3,spark_1_y
-       li   r4,>200b
-       mov  @n_sparks,r5
-       jeq  upload_sprites_6
-upload_sprites_5:
-       bl   @upload_sprite
-       ai   r3,4                       ; Skip dy/dx
-       dec  r5
-       jne  upload_sprites_5
-*      Fuse
-       abs  @fuse_active
-       jeq  upload_sprites_6
-       li   r3,fuse_y
-       li   r4,>3008
-       bl   @upload_sprite
-*      End marker
-upload_sprites_6:
-       movb @b_d0,*r15
-       .endproc
+       jne  upload_tix_1
+upload_tix_5:
+       rt
 tix_attr:
        data >100c,>1402,>1803,>1C0e
-*// upload_sprites
+*// upload_tix
 
 *********************************************************************
 *
@@ -1864,14 +1931,20 @@ mark_tix:
        .proc
        .push r0
        .push r1
-       mov  @tix_x,r0
+       li   r6,tix1
+       mov  @n_tixes,r8
+mark_tix_0:
+       mov  @tix_x(r6),r0
        srl  r0,4
-       mov  @tix_y,r1
+       mov  @tix_y(r6),r1
        srl  r1,4
        bl   @get_char
-       mov  r0,@tix_addr
-       movb r1,@tix_char
+       mov  r0,@tix_addr(r6)
+       movb r1,@tix_char(r6)
        movb @b_tix,*r0
+       ai   r6,tix_size
+       dec  r8
+       jne  mark_tix_0
        .pop r1
        .pop r0
        .endproc
@@ -1882,8 +1955,14 @@ mark_tix:
 * Unmark tix on map
 *
 unmark_tix:
-       mov  @tix_addr,r0
-       movb @tix_char,*r0
+       li   r6,tix1
+       mov  @n_tixes,r8
+unmark_tix_0:
+       mov  @tix_addr(r6),r0
+       movb @tix_char(r6),*r0
+       ai   r6,tix_size
+       dec  r8
+       jne  unmark_tix_0
        rt
 *// unmark_tix
 
@@ -2851,7 +2930,7 @@ map:
 map_backup:
        bss  map_size
 tix_tail:
-       bss  tix_tail_size
+       bss  tix_tail_size*2
 trail:
        equ  $
 flood_fill_stack:

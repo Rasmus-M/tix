@@ -20,10 +20,9 @@ intro_1:
        clr  @inactivity_time
        clr  @time_out
 *      Init tix
-       li   r0,172
-       li   r1,48
+       li   r0,init_tix_intro_data
        bl   @init_tix
-       clr  @tix_tail_pointer
+       clr  @tix1_tail_pointer
 *      Sparks
        li   r0,intro_init_sparks_data
        bl   @init_sparks
@@ -60,7 +59,7 @@ intro_1:
        bl   @intro_screen
 *      Your opponents
        li   r0,tix_tail
-       mov  r0,@tix_tail_pointer
+       mov  r0,@tix1_tail_pointer
        bl   @intro_screen
 *      The Tix
        bl   @intro_screen
@@ -78,6 +77,9 @@ intro_1:
        b    @intro_1
 intro_2:
        .endproc
+init_tix_intro_data:
+       data 1
+       data 172,48,>0100,>1100
 *// intro
 
 *********************************************************************
@@ -155,7 +157,7 @@ intro_game_loop_1:
        bl   @auto_user_input
        bl   @move_player
        bl   @plot_trail
-       mov  @tix_tail_pointer,r0
+       mov  @tix1_tail_pointer,r0
        jeq  intro_game_loop_3
        bl   @move_tix
 intro_game_loop_3:
