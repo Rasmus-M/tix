@@ -134,8 +134,10 @@ score_msw:
        equ  score_lsw+2
 old_score:
        equ  score_msw+2
-area:
+score_multiplier:
        equ  old_score+2
+area:
+       equ  score_multiplier+2
 old_area:
        equ  area+2
 area_required:
@@ -358,6 +360,8 @@ init_game:
        clr  @score_lsw
        clr  @score_msw
        seto @old_score
+       li   r0,1
+       mov r0,@score_multiplier
        clr  @level
        .endproc
 *// init_game
@@ -381,12 +385,12 @@ init_level:
        li   r0,4
        mov  r0,@y
 *      Tix
-       li   r0,init_tix_level_data_1
+       li   r0,init_tix_level_data_2
        bl   @init_tix
 *      Screen
        bl   @init_map
        .endproc
-init_tix_level_data:
+init_tix_level_data_1:
        data 1
        data 196,132,>0100,>1100
 init_tix_level_data_2:
@@ -1643,7 +1647,7 @@ game_over:
 *
 * Fill area
 *
-* On return r0 contains the number of tiles filled, incuding outline
+* On return r0 contains the number of tiles filled, incuding outline.
 *
 fill_area:
        .proc
@@ -1687,6 +1691,16 @@ fill_area_2:
        mov  r9,r2
        li   r3,white*256
        bl   @flood_fill
+       mov  r4,r4
+       jgt  fill_area_3
+       jeq  fill_area_3
+*      Tix split
+       bl   @restore_map
+       inc  @score_multiplier
+       inct @status
+       clr  r0
+       jmp fill_area_6
+*      Fill OK
 fill_area_3:
        mov  @trail_pointer,r0
        ai   r0,-trail
@@ -1702,6 +1716,7 @@ fill_area_4:
        bl   @play_fill_2
 fill_area_5:
        .pop r0
+fill_area_6:
        .endproc
 *// fill_area
 
@@ -1839,7 +1854,7 @@ plot:
 * r2 (MSB): replacement char
 * r3 (MSB): target char
 *
-* On return r4 contains the number of pixels filled.
+* On return r4 contains the number of pixels filled or -1 if tix is found.
 *
 flood_fill:
        .proc
@@ -1858,7 +1873,7 @@ flood_fill:
 * r2 (MSB): replacement char
 * r3 (MSB): target char
 *
-* On return r4 contains the number of pixels filled.
+* On return r4 contains the number of pixels filled or -1 if tix is found.
 *
 flood_fill_addr:
        li   r1,flood_fill_stack
@@ -1991,7 +2006,8 @@ map_address:
 * r0: Points to add
 *
 add_score:
-       a    r0,@score_lsw
+       mpy  @score_multiplier,r0
+       a    r1,@score_lsw
        jnc  add_score_1
        inc  @score_msw
 add_score_1:
@@ -2879,7 +2895,22 @@ txt_threshold:
 txt_bonus:
        text "BONUS 00 X 1000"
        byte 0
+txt_split_tix:
+       text "SPLIT TIX"
+       byte 0
+txt_tix_line:
+       byte 245-(chr_space-32),246-(chr_space-32),246-(chr_space-32)
+       byte 0
        even
+txt_all_scores_now:
+       text "ALL SCORES NOW"
+       byte 0
+txt_x:
+       text "X"
+       byte 0
+txt_original_value:
+       text "ORIGINAL VALUE"
+       byte 0
 
 d10000:
        data 10000

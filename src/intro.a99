@@ -348,9 +348,6 @@ txt_your_opponents:
 txt_the_tix:
        text "THE TIX"
        byte 0
-txt_tix_line:
-       byte 245-(chr_space-32),246-(chr_space-32),246-(chr_space-32)
-       byte 0
 txt_sparx:
        text "SPARX"
        byte 0
