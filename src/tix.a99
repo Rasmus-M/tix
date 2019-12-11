@@ -385,7 +385,7 @@ init_level:
        li   r0,4
        mov  r0,@y
 *      Tix
-       li   r0,init_tix_level_data_2
+       li   r0,init_tix_level_data_1
        bl   @init_tix
 *      Screen
        bl   @init_map
@@ -1569,6 +1569,28 @@ level_completed:
        li   r2,120
        bl   @wait
 *      Display result
+       mov  @status,r0
+       ci   r0,1
+       jgt  level_completed_1
+       bl   @display_bonus_screen
+       jmp  level_completed_2
+level_completed_1:
+       bl   @display_tix_split_screen
+*      Pause
+level_completed_2:
+       li   r2,120
+       bl   @wait
+*      Next level
+       inc  @level
+       .endproc
+*// level_completed
+
+*********************************************************************
+*
+* Display bonus screen
+*
+display_bonus_screen:
+       .proc
        li   r0,3*32
        li   r1,32
        li   r2,21
@@ -1601,13 +1623,28 @@ level_completed:
        li   r0,15*32+14
        bl   @display_decimal
        bl   @display_score
-*      Pause
-       li   r2,120
-       bl   @wait
-*      Next level
-       inc  @level
        .endproc
-*// level_completed
+*// display_bonus_screen
+
+*********************************************************************
+*
+* Display tix split screen
+*
+display_tix_split_screen:
+       .proc
+       li   r0,3*32
+       li   r1,32
+       li   r2,21
+       bl   @display_box
+       li   r0,texts_tix_split
+       bl   @display_texts
+*      Score multiplier
+       li   r0,13*32+15
+       mov  @score_multiplier,r1
+       li   r2,1
+       bl   @display_tall_decimal
+       .endproc
+*// display_tix_split_screen
 
 *********************************************************************
 *
@@ -2168,6 +2205,7 @@ bin_to_dec:
        sla  r3,1
        ai   r3,d10000
        dec  r2
+       jeq  bin_to_dec_2
 bin_to_dec_1:
        clr  r0
        div  *r3+,r0
@@ -2176,6 +2214,7 @@ bin_to_dec_1:
        movb r0,*r4+
        dec  r2
        jne  bin_to_dec_1
+bin_to_dec_2:
        ai   r1,chr_zero
        swpb r1
        movb r1,*r4+
@@ -2881,6 +2920,12 @@ texts_result:
        data 9*32+9,txt_percentage
        data 11*32+9,txt_threshold
        data 13*32+9,txt_bonus
+       data -1
+texts_tix_split:
+       data 9*32+12,txt_split_tix
+       data 11*32+9,txt_all_scores_now
+       data 14*32+17,txt_x
+       data 16*32+9,txt_original_value
        data -1
 
 txt_game_over:

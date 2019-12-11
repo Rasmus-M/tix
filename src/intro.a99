@@ -74,7 +74,7 @@ intro_1:
        clr  @score_lsw
        clr  @score_msw
        clr  @area
-       b    @intro_1
+       jmp  intro_1
 intro_2:
        .endproc
 init_tix_intro_data:
@@ -96,7 +96,7 @@ intro_screen:
        mov  r0,r0
        jeq  intro_screen_1
        .pop  r11
-       b     @intro_2
+       jmp    intro_2
 intro_screen_1:
        .endproc
 intro_screen_data:
