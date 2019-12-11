@@ -99,10 +99,8 @@ tix_tail_pointer:
        equ  12
 tix_addr:
        equ  14
-tix_char:
-       equ  16
 tix_size:
-       equ  18
+       equ  16
 
 **
 * Scratch pad
@@ -216,10 +214,8 @@ tix1_tail_pointer:
        equ  tix1_ay+2
 tix1_addr:
        equ  tix1_tail_pointer+2
-tix1_char:
-       equ  tix1_addr+2
 tix2:
-       equ  tix1_char+2
+       equ  tix1_addr+2
 tix2_x:                                ; FP 12.4
        equ  tix2
 tix2_y:                                ; FP 12.4
@@ -236,10 +232,8 @@ tix2_tail_pointer:
        equ  tix2_ay+2
 tix2_addr:
        equ  tix2_tail_pointer+2
-tix2_char:
-       equ  tix2_addr+2
 n_sparks:
-       equ  tix2_char+2
+       equ  tix2_addr+2
 spark_1_y:
        equ  n_sparks+2
 spark_1_x:
@@ -1998,7 +1992,6 @@ mark_tix_0:
        srl  r1,4
        bl   @get_char
        mov  r0,@tix_addr(r6)
-       movb r1,@tix_char(r6)
        movb @b_tix,*r0
        ai   r6,tix_size
        dec  r8
@@ -2017,7 +2010,7 @@ unmark_tix:
        mov  @n_tixes,r8
 unmark_tix_0:
        mov  @tix_addr(r6),r0
-       movb @tix_char(r6),*r0
+       movb @b_black,*r0
        ai   r6,tix_size
        dec  r8
        jne  unmark_tix_0
