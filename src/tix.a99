@@ -36,6 +36,8 @@ spratb equ  >3000                      ; Sprite attribute table base
 **
 * Constants
 *
+can_die:
+       equ  1
 n_lives:
        equ  3
 map_width:
@@ -634,17 +636,17 @@ user_input_5:
        mov  r3,r0
        jeq  user_input_7
 user_input_6:
-       mov  @dx,@dx_old
-       mov  @dy,@dy_old
+       mov  r2,@dx_old                 ; Save last non-zero direction
+       mov  r3,@dy_old
 user_input_7:
-       mov  r2,@dx
+       mov  r2,@dx                     ; Current direction, 0 if not moving stick
        mov  r3,@dy
        abs  r4
        jeq  user_input_8
        sla  r2,1
        sla  r3,1
 user_input_8:
-       mov  r2,@vx
+       mov  r2,@vx                     ; Velocity taking fire into account
        mov  r3,@vy
 user_input_9:
        .endproc
@@ -895,7 +897,9 @@ move_tix_5:
        bl   @check_for_trail
        jne  move_tix_7
 *      Hit trail
+       .ifeq can_die,1
        dec  @status
+       .endif
        jmp  move_tix_7
 *      Move
 move_tix_6:
@@ -1104,7 +1108,9 @@ update_sparks_14:
        mov  *r0+,*r3+
        mov  *r0+,*r3+
        mov  *r0+,*r3+
+       .ifeq can_die,1
        dec  @status
+       .endif
 *      Loop
 update_sparks_15:
        mov  r5,r3
