@@ -2,9 +2,8 @@
 *
 * Tix (Qix like)
 * For the TI-99/4A home computer
-* 16K cartridge version
 *
-* September 2019
+* September - December 2019
 * Rasmus Moustgaard <rasmus.moustgaard@gmail.com>
 *
 
@@ -326,6 +325,7 @@ new_game:
        bl   @init_game
 new_level:
        bl   @init_level
+       bl   @display_multiple_tix_screen
 new_life:
        bl   @resume_level
        bl   @join_effect
@@ -381,7 +381,20 @@ init_level:
        li   r0,4
        mov  r0,@y
 *      Tix
+       mov  @level,r1
+       ci   r1,16
+       jl   init_level_1
+       li   r1,15
+init_level_1:
+       sla  r1,1
+       mov  @level_n_tixes(r1),r1
+       ci   r1,1
+       jgt  init_level_2
        li   r0,init_tix_level_data_1
+       jmp  init_level_3
+init_level_2:
+       li   r0,init_tix_level_data_2
+init_level_3:
        bl   @init_tix
 *      Screen
        bl   @init_map
@@ -401,9 +414,9 @@ init_tix_level_data_2:
 *
 init_area_required:
        mov  @level,r0
-       ci   r0,10
+       ci   r0,16
        jl   init_area_required_1
-       li   r0,9
+       li   r0,15
 init_area_required_1:
        sla  r0,1
        ai   r0,level_area_pct
@@ -505,6 +518,27 @@ init_sparks_data:
        data 4,(map_width_pixels/2)+4,0,-1
        data map_height_pixels-4,(map_width_pixels/2)+4,0,1
 *// init_sparks
+
+*********************************************************************
+*
+* Display multiple tix screen
+*
+display_multiple_tix_screen:
+       .proc
+       mov  @n_tixes,r0
+       ci   r0,1
+       jeq  display_multiple_tix_screen_1
+       li   r0,3*32
+       li   r1,32
+       li   r2,21
+       bl   @display_box
+       li   r0,texts_multiple_tix
+       bl   @display_texts
+       li   r2,120
+       bl   @wait
+display_multiple_tix_screen_1:
+       .endproc
+*// display_multiple_tix_screen
 
 *********************************************************************
 *
@@ -2922,9 +2956,16 @@ texts_result:
        data -1
 texts_tix_split:
        data 9*32+12,txt_split_tix
+       data 10*32+18,txt_tix_line
        data 11*32+9,txt_all_scores_now
        data 14*32+17,txt_x
        data 16*32+9,txt_original_value
+       data -1
+texts_multiple_tix:
+       data 9*32+8,txt_points_multiply
+       data 10*32+9,txt_if_stix_split
+       data 11*32+12,txt_2x_tix
+       data 12*32+15,txt_tix_line
        data -1
 
 txt_game_over:
@@ -2955,6 +2996,15 @@ txt_x:
 txt_original_value:
        text "ORIGINAL VALUE"
        byte 0
+txt_points_multiply:
+       text "POINTS MULTIPLY"
+       byte 0
+txt_if_stix_split:
+       text "IF STIX SPLIT"
+       byte 0
+txt_2x_tix:
+       text "2X TIX"
+       byte 0
 
 d10000:
        data 10000
@@ -2978,7 +3028,9 @@ b_d0:
        byte >d0
 
 level_area_pct:
-       data 50,60,70,75,80,85,90,92,94,95
+       data 75,75,75,80,80,85,85,90,90,92,92,94,94,94,95,95
+level_n_tixes:
+       data 1,1,2,1,1,1,2,1,1,2,1,2,1,2,2,1
 
        copy "chars.a99"
        copy "sprites.a99"
