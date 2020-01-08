@@ -1227,7 +1227,9 @@ update_fuse_5:
        jmp  update_fuse_6
 *      Stop fuse
 update_fuse_7:
+       .ifeq can_die,1
        dec  @status
+       .endif
        clr  @fuse_active
        clr  @fuse_trail_pointer
 update_fuse_6:
