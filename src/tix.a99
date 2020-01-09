@@ -2513,6 +2513,10 @@ one_time_init:
        .proc
        li   r15,vdpwd
        bl   @graphics_mode
+*      Clear scratch pad
+       li   r0,padvar
+       li   r2,>e0
+       bl   @clear
 *      Patterns
        li   r0,ptrntb
        li   r1,chars
