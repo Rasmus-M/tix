@@ -16,4 +16,8 @@ rem xdm99.py tix.dsk -a LOAD
 xdm99.py tix.dsk -a bin/TIX
 xdm99.py tix.dsk -a bin/TIY
 
+WHERE jar
+@IF %ERRORLEVEL% NEQ 0 GOTO :end
+jar -cvf tix.rpk tix8.bin layout.xml > make.log
+
 :end
