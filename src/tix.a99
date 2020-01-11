@@ -2515,7 +2515,7 @@ one_time_init:
        bl   @graphics_mode
 *      Clear scratch pad
        li   r0,padvar
-       li   r2,>e0
+       li   r2,>8400-padvar
        bl   @clear
 *      Mute sound
        bl   @mute_sound
