@@ -1769,8 +1769,12 @@ fill_area_2:
        jeq  fill_area_3
 *      Tix split
        bl   @restore_map
+       mov  @n_tixes,r0
+       ci   r0,1
+       jeq  fill_area_7                ; Error: can't split single TIX
        inc  @score_multiplier
        inct @status
+fill_area_7:
        clr  r0
        jmp fill_area_6
 *      Fill OK
@@ -1779,8 +1783,8 @@ fill_area_3:
        ai   r0,-trail
        srl  r0,1
        a    r4,r0
-       .push r0
 *      Play sound
+       .push r0
        abs  @slow
        jne  fill_area_4
        bl   @play_fill
@@ -2026,7 +2030,7 @@ mark_tix_0:
        srl  r0,4
        mov  @tix_y(r6),r1
        srl  r1,4
-       bl   @get_char
+       bl   @get_char                  ; Returns address in r0
        mov  r0,@tix_addr(r6)
        movb @b_tix,*r0
        ai   r6,tix_size
